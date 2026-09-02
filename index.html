@@ -1923,7 +1923,7 @@ async function fetchData() {
   try {
     var sid = territorySheetId(currentTerritory);
     var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchGet({
-      spreadsheetId: sid, ranges: ['Accounts!A:GE','Visits!A:K','Change Log!A:H','Activity Log!A:H','Personnel!A:H','Product Part Numbers!A:I']
+      spreadsheetId: sid, ranges: ['Accounts!A:HT','Visits!A:K','Change Log!A:H','Activity Log!A:H','Personnel!A:I','Product Part Numbers!A:I']
     }); });
     var vr = res.result.valueRanges || [];
     var accRows = (vr[0] && vr[0].values) || [];
@@ -2566,7 +2566,7 @@ function openAccount(id) {
 
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fv(v) { return v ? '<span class="field-value">'+esc(v)+'</span>' : '<span class="field-value empty">—</span>'; }
-function fvEmail(v) { return v ? '<span class="field-value"><a href="mailto:'+esc(v)+'">'+esc(v)+'</a></span>' : '<span class="field-value empty">—</span>'; }
+function fvEmail(v) { return v ? '<span class="field-value"><a href="mailto:'+esc(v)+'" style="color:var(--white)">'+esc(v)+'</a></span>' : '<span class="field-value empty">—</span>'; }
 function fmtNum(v) {
   var n = parseFloat(v);
   if (isNaN(n)) return esc(v);
@@ -2730,8 +2730,7 @@ function renderDetail() {
     '</div></div>'+
     '<div class="card"><div class="card-header" style="display:flex;justify-content:space-between;align-items:center">'+
       '<span>👤 Key Personnel</span>'+
-      '<div><button type="button" class="btn btn-secondary btn-sm" id="emailByTitleBtn" style="font-size:11px;padding:4px 10px;margin-right:6px">📧 Email by Title</button>'+
-      '<button type="button" class="btn btn-secondary btn-sm edit-section-btn" data-section="personnel" style="font-size:11px;padding:4px 10px">✏️ Edit</button></div>'+
+      '<button type="button" class="btn btn-secondary btn-sm edit-section-btn" data-section="personnel" style="font-size:11px;padding:4px 10px">✏️ Edit</button>'+
     '</div><div class="card-body">'+
     '<div class="field-row"><span class="field-label">Owner Name</span>'+fv(a.owner_name)+'</div>'+
     '<div class="field-row"><span class="field-label">Owner Work Phone</span>'+fv(a.owner_phone)+'</div>'+
@@ -3016,8 +3015,6 @@ function renderDetail() {
   document.querySelectorAll('.edit-section-btn').forEach(function(btn){
     btn.addEventListener('click', function(e){ e.stopPropagation(); openEditModal(btn.dataset.section); });
   });
-  var ebtBtn = document.getElementById('emailByTitleBtn');
-  if (ebtBtn) ebtBtn.addEventListener('click', function(e){ e.stopPropagation(); openEmailByTitle(); });
   // Personnel delete buttons now handled inside edit modal
   document.querySelectorAll('.personnel-delete-btn').forEach(function(btn){
     btn.addEventListener('click', function(e){ e.stopPropagation(); deletePersonnel(btn.dataset.pid); });
@@ -3409,7 +3406,7 @@ async function deletePersonnel(personnelId) {
     var sheetMeta = await withRetry(function(){ return gapi.client.sheets.spreadsheets.get({spreadsheetId:territorySheetId(currentTerritory)}); });
     var perSheet = sheetMeta.result.sheets.find(function(s){ return s.properties.title==='Personnel'; });
     var allRows = (await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId:territorySheetId(currentTerritory), range:'Personnel!A:H'
+      spreadsheetId:territorySheetId(currentTerritory), range:'Personnel!A:I'
     }); })).result.values || [];
     for (var i=1; i<allRows.length; i++) {
       if (allRows[i][0]===personnelId) {
@@ -3978,52 +3975,6 @@ function emailVisit(vidOrObj) {
   }
   var body = bodyLines.join('\n');
   var mailto = 'mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  window.location.href = mailto;
-}
-
-// ── Email by Title ────────────────────────────────────────────────────────
-// Groups every contact on the current account — the fixed Owner/GM/FOD/PM/SM
-// /Other roles plus any free-form Personnel tab entries — by their title,
-// then lets the rep pick one title and fires a single mailto with everyone
-// who holds that title BCC'd. "Title" for the fixed roles is a fixed label
-// (Owner, GM, etc); for Personnel entries it's whatever the rep typed into
-// the Role field, so entries are grouped by an exact, case-insensitive match
-// on that text.
-function buildAccountContactsByTitle(a) {
-  var groups = {}; // title -> [{name,email}]
-  function add(title, name, email) {
-    if (!email) return;
-    title = (title||'').trim();
-    if (!title) return;
-    if (!groups[title]) groups[title] = [];
-    groups[title].push({name:name||'', email:email});
-  }
-  add('Owner', a.owner_name, a.owner_email);
-  add('General Manager', a.gm_name, a.gm_email);
-  add('FOD', a.fod_name, a.fod_email);
-  add('Parts Manager', a.pm_name, a.pm_email);
-  add('Service Manager', a.sm_name, a.sm_email);
-  add(a.other2_role, a.other2_name, a.other2_email);
-  allPersonnel.filter(function(p){ return p.account_id===a.account_id; }).forEach(function(p){
-    add(p.role, p.name, p.email);
-  });
-  return groups;
-}
-
-function openEmailByTitle() {
-  var a = currentAccount;
-  var groups = buildAccountContactsByTitle(a);
-  var titles = Object.keys(groups);
-  if (!titles.length) { showToast('No contacts with an email on file for this account','error'); return; }
-  var lines = titles.map(function(t, i){ return (i+1)+'. '+t+' ('+groups[t].length+')'; });
-  var choice = prompt('Email which title?\n'+lines.join('\n')+'\n\nEnter a number:');
-  if (!choice) return;
-  var idx = parseInt(choice)-1;
-  if (isNaN(idx) || idx<0 || idx>=titles.length) { showToast('Not a valid choice','error'); return; }
-  var title = titles[idx];
-  var emails = groups[title].map(function(c){ return c.email; });
-  var subject = a.business_name+' — '+title;
-  var mailto = 'mailto:?bcc='+encodeURIComponent(emails.join(','))+'&subject='+encodeURIComponent(subject);
   window.location.href = mailto;
 }
 
@@ -4992,7 +4943,7 @@ function describeBatchFailure(failedTerritories, allTerritories, sawAuthError) {
 async function pullAllTerritoriesForMaster() {
   var territories = Object.keys(TERRITORY_SHEET_IDS);
   var sawAuthError = false;
-  var ranges = ['Accounts!A:GE','Change Log!A:H','Rankings!A:J','Machine Data!A:Z','Visits!A:K','Territory Updates!A:H'];
+  var ranges = ['Accounts!A:HT','Change Log!A:H','Rankings!A:J','Machine Data!A:Z','Visits!A:K','Territory Updates!A:H'];
 
   var results = await Promise.all(territories.map(function(t){
     return withRetry(function(){
@@ -5030,7 +4981,7 @@ async function pullAllTerritoriesForMaster() {
     while (out.length < width) out.push('');
     return out;
   }
-  var ACCOUNTS_WIDTH = Object.keys(COL).length; // 187 — matches Accounts!A:GE
+  var ACCOUNTS_WIDTH = Object.keys(COL).length; // 228 — matches Accounts!A:HT
 
   results.forEach(function(r){
     r.accRows.slice(1).forEach(function(row){
@@ -5119,7 +5070,7 @@ async function openCompanyView() {
 
   try {
     var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchGet({
-      spreadsheetId: COMPANY_MASTER_SHEET_ID, ranges: ['Accounts!A:GE','Change Log!A:H','Rankings!A:K','Meta!A:B']
+      spreadsheetId: COMPANY_MASTER_SHEET_ID, ranges: ['Accounts!A:HT','Change Log!A:H','Rankings!A:K','Meta!A:B']
     }); });
     var vr = res.result.valueRanges || [];
     var accRows = (vr[0] && vr[0].values) || [];
@@ -6566,7 +6517,7 @@ async function runWeeklyRecap() {
       // same data, one spreadsheet instead of ten. Only "Refresh Company Data"
       // (PIN-gated, on Company Dashboard) still hits every territory at once.
       var mRes = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchGet({
-        spreadsheetId: COMPANY_MASTER_SHEET_ID, ranges: ['Visits!A:K','Change Log!A:H','Accounts!A:GE','Territory Updates!A:H']
+        spreadsheetId: COMPANY_MASTER_SHEET_ID, ranges: ['Visits!A:K','Change Log!A:H','Accounts!A:HT','Territory Updates!A:H']
       }); });
       var mvr = mRes.result.valueRanges || [];
       var visRaw = ((mvr[0] && mvr[0].values) || []).slice(1);
@@ -6582,7 +6533,7 @@ async function runWeeklyRecap() {
       var results = await Promise.all([
         withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:sid, range:'Visits!A:K'}); }),
         withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:sid, range:'Change Log!A:H'}); }),
-        withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:sid, range:'Accounts!A:GE'}); }),
+        withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:sid, range:'Accounts!A:HT'}); }),
         withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({spreadsheetId:sid, range:'Territory Updates!A:H'}); }),
       ]);
       var visRaw = (results[0].result.values||[]).slice(1);
@@ -6759,6 +6710,34 @@ function renderWeeklyRecap(changes, visits, tu, start, end, territory, conversio
       '</div></div>';
   }
 
+  if (!conversionsOnly) {
+    var highlightCount = visits.filter(function(v){ return (v.is_highlight||'').toLowerCase()==='yes'; }).length;
+    html += '<div class="visit-card">'+
+      '<div class="visit-card-header"><span>📅 Visit Log ('+fmtDate(start)+' – '+fmtDate(end)+')</span>'+
+      '<span style="font-size:11px;opacity:0.7">'+visits.length+' visit'+(visits.length!==1?'s':'')+(highlightCount?' · '+highlightCount+' highlighted':'')+'</span></div>';
+
+    if (!visits.length) {
+      html += '<div style="padding:20px;text-align:center;color:var(--gray-3);font-size:13px">No visits logged in this period.</div>';
+    } else {
+      html += visits.map(function(v){
+        var isStar = (v.is_highlight||'').toLowerCase()==='yes';
+        var typeTag = v.account_status==='active' ? '<span class="account-type-tag type-active">Active</span>'
+                    : v.account_status==='prospect' ? '<span class="account-type-tag type-prospect">Prospect</span>' : '';
+        return '<div class="visit-entry recap-acct-link'+(isStar?' highlighted':'')+'" data-aid="'+v.account_id+'" style="cursor:pointer" title="Open '+esc(v.account_name)+'">'+
+          '<div class="visit-entry-top">'+
+            '<div class="visit-date">'+(isStar?'⭐ ':'')+(v.visit_date||'Date not recorded')+(v.attendees?' · '+v.attendees:'')+
+            (territory==='ALL'?' <span style="color:var(--gold)">· '+esc(v.territory)+'</span>':'')+'</div>'+
+            '<span style="color:var(--gold);font-size:16px">›</span>'+
+          '</div>'+
+          '<div style="font-weight:600;font-size:12px;color:var(--gray-4);margin-top:2px">'+esc(v.account_name)+typeTag+'</div>'+
+          '<div class="visit-notes" style="margin-top:4px">'+esc(v.notes||'—')+'</div>'+
+          (v.followup_date||v.followup_notes?'<div class="visit-followup">📌 '+(v.followup_date||'')+(v.followup_notes?' — '+v.followup_notes:'')+'</div>':'')+
+        '</div>';
+      }).join('');
+    }
+    html += '</div>';
+  }
+
   html += '<div class="card" style="margin-bottom:16px">'+
     '<div class="card-header">'+(conversionsOnly?'🎉 Conversions & Reversions':'📋 Key Field Changes')+' ('+fmtDate(start)+' – '+fmtDate(end)+')'+
     (territory==='ALL'?' — All Territories':' — '+territory)+
@@ -6809,34 +6788,6 @@ function renderWeeklyRecap(changes, visits, tu, start, end, territory, conversio
     }).join('');
   }
   html += '</div></div>';
-
-  if (!conversionsOnly) {
-    var highlightCount = visits.filter(function(v){ return (v.is_highlight||'').toLowerCase()==='yes'; }).length;
-    html += '<div class="visit-card">'+
-      '<div class="visit-card-header"><span>📅 Visit Log ('+fmtDate(start)+' – '+fmtDate(end)+')</span>'+
-      '<span style="font-size:11px;opacity:0.7">'+visits.length+' visit'+(visits.length!==1?'s':'')+(highlightCount?' · '+highlightCount+' highlighted':'')+'</span></div>';
-
-    if (!visits.length) {
-      html += '<div style="padding:20px;text-align:center;color:var(--gray-3);font-size:13px">No visits logged in this period.</div>';
-    } else {
-      html += visits.map(function(v){
-        var isStar = (v.is_highlight||'').toLowerCase()==='yes';
-        var typeTag = v.account_status==='active' ? '<span class="account-type-tag type-active">Active</span>'
-                    : v.account_status==='prospect' ? '<span class="account-type-tag type-prospect">Prospect</span>' : '';
-        return '<div class="visit-entry recap-acct-link'+(isStar?' highlighted':'')+'" data-aid="'+v.account_id+'" style="cursor:pointer" title="Open '+esc(v.account_name)+'">'+
-          '<div class="visit-entry-top">'+
-            '<div class="visit-date">'+(isStar?'⭐ ':'')+(v.visit_date||'Date not recorded')+(v.attendees?' · '+v.attendees:'')+
-            (territory==='ALL'?' <span style="color:var(--gold)">· '+esc(v.territory)+'</span>':'')+'</div>'+
-            '<span style="color:var(--gold);font-size:16px">›</span>'+
-          '</div>'+
-          '<div style="font-weight:600;font-size:12px;color:var(--gray-4);margin-top:2px">'+esc(v.account_name)+typeTag+'</div>'+
-          '<div class="visit-notes" style="margin-top:4px">'+esc(v.notes||'—')+'</div>'+
-          (v.followup_date||v.followup_notes?'<div class="visit-followup">📌 '+(v.followup_date||'')+(v.followup_notes?' — '+v.followup_notes:'')+'</div>':'')+
-        '</div>';
-      }).join('');
-    }
-    html += '</div>';
-  }
 
   document.getElementById('recapContent').innerHTML = html;
 
@@ -7294,7 +7245,7 @@ async function saveNewAccount() {
   var vals = Object.keys(COL).map(function(k){ return currentAccount[k]||''; });
   try {
     var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.append({
-      spreadsheetId:territorySheetId(currentTerritory), range:'Accounts!A:GE',
+      spreadsheetId:territorySheetId(currentTerritory), range:'Accounts!A:HT',
       valueInputOption:'RAW', resource:{values:[vals]}
     }); });
     allAccounts.push(currentAccount);
