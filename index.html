@@ -4056,6 +4056,45 @@ function fuzzyMatchAccount(name, accountsList) {
   return bestScore >= 0.6 ? { account: best, confidence: bestScore } : null;
 }
 
+// When a ranking report contains legacy duplicate customer numbers for the
+// same live dealer (a re-registration under a new number, with the old one
+// still trailing in the source system), more than one row can independently
+// fuzzy-match to the same CRM account. Left alone, whichever row happens to
+// come first in upload order silently wins the account-card display, and
+// territory sales totals double-count both. This keeps only the
+// highest-confidence match per account_id and demotes the rest back to
+// unmatched, where they belong.
+function dedupeMatchesByAccount(rows, unmatched) {
+  var bestByAccount = {};
+  rows.forEach(function(r){
+    if (!r.account_id) return;
+    var prev = bestByAccount[r.account_id];
+    if (!prev || (r._matchConfidence||0) > (prev._matchConfidence||0)) bestByAccount[r.account_id] = r;
+  });
+  var demoted = 0;
+  rows.forEach(function(r){
+    if (r.account_id && bestByAccount[r.account_id] !== r) {
+      r.account_id = '';
+      unmatched.push(r.account_name);
+      demoted++;
+    }
+  });
+  return demoted;
+}
+
+// Splits an unmatched-name list into legacy "FD ..." / "GM ..." entries (old
+// Ford/GM customer-number registrations that a dealer has since been
+// re-registered under — expected noise, not something to act on) versus
+// everything else, which may be a genuinely new/missing dealer worth checking.
+function splitLegacyFD(unmatched) {
+  var fd = [], other = [];
+  unmatched.forEach(function(name){
+    if (/^\s*(fd|gm)\s/i.test(name)) fd.push(name);
+    else other.push(name);
+  });
+  return { fd: fd, other: other };
+}
+
 // Lightweight per-territory account cache used only for cross-territory
 // matching during ranking/machine uploads that cover every route at once —
 // avoids needing to actually switch the loaded territory to match each one.
@@ -4287,16 +4326,19 @@ async function handleRankingsUpload(evt) {
         var matched = 0, unmatched = [];
         res.rows.forEach(function(r){
           var m = fuzzyMatchAccount(r.account_name, matchAccts);
-          if (m) { r.account_id = m.account.account_id; matched++; }
+          if (m) { r.account_id = m.account.account_id; r._matchConfidence = m.confidence; matched++; }
           else { unmatched.push(r.account_name); }
         });
+        matched -= dedupeMatchesByAccount(res.rows, unmatched);
+        var split = splitLegacyFD(unmatched);
         _pendingRankingsUpload.push({ file: file, territory: territory, sheetId: sheetId, parsed: {rows: res.rows, reportMonth: res.reportMonth} });
         var statusColor = matched===res.rows.length ? '#5dba7d' : '#d4ac0d';
         previewRows.push('<div class="upload-preview-row">'+
           '<div><div class="filename">'+esc(file.name)+' — '+esc(territory)+'</div>'+
           '<div class="match-count">'+res.rows.length+' accounts · '+
           '<span style="color:'+statusColor+'">'+matched+' matched</span>'+
-          (unmatched.length?' · <span style="color:#d47070">'+unmatched.length+' unmatched</span>':'')+
+          (split.fd.length?' · <span style="color:#8a8a8a" title="'+esc(split.fd.join(', '))+'">'+split.fd.length+' legacy FD/GM (expected)</span>':'')+
+          (split.other.length?' · <span style="color:#d47070">'+split.other.length+' unmatched</span>':'')+
           '</div></div>'+
           '<span style="color:#5dba7d">✓ Ready</span></div>');
       }
@@ -4331,10 +4373,12 @@ async function handleRankingsUpload(evt) {
     parsed.rows.forEach(function(r){
       if (territory === currentTerritory) {
         var m = fuzzyMatchAccount(r.account_name);
-        if (m) { r.account_id = m.account.account_id; matched++; }
+        if (m) { r.account_id = m.account.account_id; r._matchConfidence = m.confidence; matched++; }
         else { unmatched.push(r.account_name); }
       }
     });
+    matched -= dedupeMatchesByAccount(parsed.rows, unmatched);
+    var split2 = splitLegacyFD(unmatched);
 
     _pendingRankingsUpload.push({ file: file, territory: territory, sheetId: sheetId, parsed: parsed });
 
@@ -4343,7 +4387,8 @@ async function handleRankingsUpload(evt) {
       '<div><div class="filename">'+esc(file.name)+'</div>'+
       '<div class="match-count">'+territory+' · '+parsed.rows.length+' accounts · '+
       '<span style="color:'+statusColor2+'">'+matched+' matched</span>'+
-      (unmatched.length?' · <span style="color:#d47070">'+unmatched.length+' unmatched</span>':'')+
+      (split2.fd.length?' · <span style="color:#8a8a8a" title="'+esc(split2.fd.join(', '))+'">'+split2.fd.length+' legacy FD/GM (expected)</span>':'')+
+      (split2.other.length?' · <span style="color:#d47070">'+split2.other.length+' unmatched</span>':'')+
       '</div></div>'+
       '<span style="color:#5dba7d">✓ Ready</span></div>');
   }
