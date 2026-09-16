@@ -6990,7 +6990,7 @@ function generateFunnelReportText() {
   lines.push(formatRecapDate(meta.start) + ' – ' + formatRecapDate(meta.end));
   lines.push('');
 
-  lines.push('VISITS: ' + visits.length + ' logged' + (highlightVisits.length ? ' (' + highlightVisits.length + ' flagged as key)' : ''));
+  lines.push('KEY VISITS: ' + highlightVisits.length);
   if (highlightVisits.length) {
     highlightVisits.forEach(function(v){
       lines.push('  • ' + formatRecapDate(v.visit_date) + ' — ' + (v.account_name||'Unknown account') +
@@ -6998,7 +6998,16 @@ function generateFunnelReportText() {
       if (v.followup_date) lines.push('      Follow-up: ' + formatRecapDate(v.followup_date) + (v.followup_notes ? ' — ' + v.followup_notes : ''));
     });
   }
-  if (otherVisits.length) lines.push('  • ' + otherVisits.length + ' additional routine visit' + (otherVisits.length===1?'':'s') + ' logged');
+  lines.push('');
+
+  lines.push('ROUTINE VISITS: ' + otherVisits.length);
+  if (otherVisits.length) {
+    otherVisits.forEach(function(v){
+      lines.push('  • ' + formatRecapDate(v.visit_date) + ' — ' + (v.account_name||'Unknown account') +
+        (v.account_town ? ' (' + v.account_town + ')' : '') + (v.notes ? ': ' + v.notes : ''));
+      if (v.followup_date) lines.push('      Follow-up: ' + formatRecapDate(v.followup_date) + (v.followup_notes ? ' — ' + v.followup_notes : ''));
+    });
+  }
   lines.push('');
 
   if (conversions.length) {
