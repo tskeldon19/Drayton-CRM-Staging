@@ -850,6 +850,7 @@
           <input type="date" id="recapEndDate">
         </div>
         <button class="btn btn-gold btn-sm" id="recapRunBtn">Run Report</button>
+        <button class="btn btn-secondary btn-sm" id="funnelReportBtn">📝 Generate Funnel Report</button>
       </div>
     </div>
     <div class="recap-preset-row" id="recapPresetRow">
@@ -994,6 +995,24 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="uploadPreviewCancel">Cancel</button>
       <button class="btn btn-gold" id="uploadPreviewConfirm">Confirm Upload</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalFunnelReport">
+  <div class="modal" style="max-width:650px">
+    <div class="modal-header">
+      <h3>📝 Weekly Funnel Report</h3>
+      <button class="modal-close" id="funnelReportClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="meta" style="margin-bottom:10px">Review below, edit anything you'd like, then copy into your email to management.</div>
+      <textarea id="funnelReportText" style="width:100%;min-height:420px;font-family:inherit;font-size:13px;line-height:1.5;padding:12px;border:1px solid var(--gray-4,#ccc);border-radius:6px;resize:vertical"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="funnelReportCloseBtn">Close</button>
+      <button class="btn btn-secondary" id="funnelReportCopyBtn">📋 Copy to Clipboard</button>
+      <button class="btn btn-gold" id="funnelReportMailBtn">📧 Open in Outlook</button>
     </div>
   </div>
 </div>
@@ -1499,6 +1518,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('machinesTypeFilter').addEventListener('change', renderMachinesTable);
   document.getElementById('recapBackBtn').addEventListener('click', goBack);
   document.getElementById('recapRunBtn').addEventListener('click', runWeeklyRecap);
+  document.getElementById('funnelReportBtn').addEventListener('click', openFunnelReportModal);
+  document.getElementById('funnelReportClose').addEventListener('click', function(){ closeModal('modalFunnelReport'); });
+  document.getElementById('funnelReportCloseBtn').addEventListener('click', function(){ closeModal('modalFunnelReport'); });
+  document.getElementById('funnelReportCopyBtn').addEventListener('click', copyFunnelReportToClipboard);
+  document.getElementById('funnelReportMailBtn').addEventListener('click', openFunnelReportInOutlook);
   document.getElementById('recapSearchInput').addEventListener('input', applyRecapSearch);
   document.querySelectorAll('.recap-cat-cb').forEach(function(cb){
     cb.addEventListener('change', function(){
@@ -1555,6 +1579,82 @@ document.addEventListener('DOMContentLoaded', function() {
     card.addEventListener('click', function(){ openMetricFilter(card.dataset.metric); });
   });
 });
+
+// Pull-to-refresh — mainly for iPad reps using this saved to the home
+// screen, where there's no browser chrome/reload button at all. Dragging
+// down from the top of the page reloads the current territory's data and
+// forces a fresh token-refresh attempt as part of that, which is also a
+// useful manual escape hatch if the background silent refresh has failed.
+(function initPullToRefresh(){
+  var PULL_THRESHOLD = 70;
+  var startY = null, pulling = false, indicator = null;
+
+  function ensureIndicator() {
+    if (indicator) return indicator;
+    indicator = document.createElement('div');
+    indicator.id = 'pullToRefreshIndicator';
+    indicator.style.cssText = 'position:fixed;top:-60px;left:0;right:0;height:60px;'+
+      'display:flex;align-items:center;justify-content:center;font-size:13px;'+
+      'color:#666;background:transparent;z-index:9999;transition:top 0.15s ease;pointer-events:none;';
+    indicator.textContent = 'Pull to refresh';
+    document.body.appendChild(indicator);
+    return indicator;
+  }
+
+  function scrollableAtTop() {
+    return (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+  }
+
+  document.addEventListener('touchstart', function(e){
+    if (!scrollableAtTop()) { startY = null; return; }
+    startY = e.touches[0].clientY;
+    pulling = false;
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    if (startY === null) return;
+    var dy = e.touches[0].clientY - startY;
+    if (dy <= 0) return;
+    if (!scrollableAtTop()) { startY = null; return; }
+    pulling = true;
+    var ind = ensureIndicator();
+    var pulled = Math.min(dy, PULL_THRESHOLD * 1.6);
+    ind.style.top = (pulled - 60) + 'px';
+    ind.textContent = dy >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh';
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(){
+    if (!pulling) { startY = null; return; }
+    pulling = false;
+    var dy = indicator ? (parseInt(indicator.style.top, 10) + 60) : 0;
+    if (indicator) indicator.style.top = '-60px';
+    startY = null;
+    if (dy >= PULL_THRESHOLD) handlePullToRefresh();
+  }, {passive:true});
+
+  async function handlePullToRefresh() {
+    var ind = ensureIndicator();
+    ind.style.top = '10px';
+    ind.textContent = 'Refreshing…';
+    try {
+      await ensureFreshToken();
+      if (currentTerritory) {
+        delete _territoryCache[currentTerritory];
+        await fetchData();
+        await fetchRankings();
+        await fetchAliases();
+        cacheCurrentTerritoryData(currentTerritory);
+        updateSortOptions(); updateStats(); renderList();
+      }
+      showToast('Refreshed');
+    } catch (e) {
+      console.error('Pull-to-refresh failed', e);
+      showToast(isAuthError(e) ? 'Your session may have expired — try signing in again.' : 'Refresh failed', 'error');
+    } finally {
+      setTimeout(function(){ ind.style.top = '-60px'; }, 400);
+    }
+  }
+})();
 
 function doSignIn() {
   if (!gisReady || !tokenClient) { showToast('Still loading, please wait a moment','error'); return; }
@@ -6615,6 +6715,152 @@ function recapChangeCategory(fieldKey) {
        'lpp_training','lpp_training_notes','contest_promo','role_play'].indexOf(fieldKey)>=0) return 'store';
   if (fieldKey.indexOf('_carrying') === fieldKey.length-9) return 'carry';
   return null;
+}
+
+// ── Funnel Report — turns the same data already loaded for the Weekly
+// Recap into a plain-text write-up a rep can paste straight into an email
+// to management. Reuses window._recapChanges/_recapVisits/_recapTu rather
+// than re-fetching anything, so it only works after Run Report has been
+// clicked at least once — openFunnelReportModal() prompts for that if
+// there's nothing loaded yet.
+function isHighlightFlag(v) { return (v || '').toString().trim().toLowerCase() === 'yes'; }
+
+function formatRecapDate(d) {
+  if (!d) return '';
+  var datePart = d.split('T')[0];
+  var parts = datePart.split('-');
+  if (parts.length !== 3) return datePart;
+  return parts[1] + '/' + parts[2]; // M/D — short form for a scannable email
+}
+
+function openFunnelReportModal() {
+  if (!window._recapMeta) {
+    showToast('Run a report first, then generate the funnel write-up from those results', 'error');
+    return;
+  }
+  document.getElementById('funnelReportText').value = generateFunnelReportText();
+  document.getElementById('modalFunnelReport').classList.add('open');
+}
+
+function generateFunnelReportText() {
+  var changes = window._recapChanges || [];
+  var visits  = window._recapVisits  || [];
+  var tu      = window._recapTu      || [];
+  var meta    = window._recapMeta    || {};
+
+  var conversions = changes.filter(function(c){ return c.is_conversion; });
+  var reversions  = changes.filter(function(c){ return c.is_reversion; });
+  var deletions   = changes.filter(function(c){ return c.is_deletion; });
+  var carryWins   = changes.filter(function(c){ return recapChangeCategory(c.field_key)==='carry' && !c.is_conversion && !c.is_reversion && !c.is_deletion; });
+  var personnelCh = changes.filter(function(c){ return recapChangeCategory(c.field_key)==='personnel'; });
+  var storeCh     = changes.filter(function(c){ return recapChangeCategory(c.field_key)==='store'; });
+  var ratingCh    = changes.filter(function(c){ return recapChangeCategory(c.field_key)==='rating'; });
+
+  var highlightVisits = visits.filter(function(v){ return isHighlightFlag(v.is_highlight); });
+  var otherVisits     = visits.filter(function(v){ return !isHighlightFlag(v.is_highlight); });
+  var highlightTu     = tu.filter(function(u){ return isHighlightFlag(u.is_highlight); });
+
+  var lines = [];
+  var territoryLabel = meta.territory === 'ALL' ? 'All Territories' : meta.territory;
+  lines.push('WEEKLY ACTIVITY SUMMARY — ' + territoryLabel);
+  lines.push(formatRecapDate(meta.start) + ' – ' + formatRecapDate(meta.end));
+  lines.push('');
+
+  lines.push('VISITS: ' + visits.length + ' logged' + (highlightVisits.length ? ' (' + highlightVisits.length + ' flagged as key)' : ''));
+  if (highlightVisits.length) {
+    highlightVisits.forEach(function(v){
+      lines.push('  • ' + formatRecapDate(v.visit_date) + ' — ' + (v.account_name||'Unknown account') +
+        (v.account_town ? ' (' + v.account_town + ')' : '') + (v.notes ? ': ' + v.notes : ''));
+      if (v.followup_date) lines.push('      Follow-up: ' + formatRecapDate(v.followup_date) + (v.followup_notes ? ' — ' + v.followup_notes : ''));
+    });
+  }
+  if (otherVisits.length) lines.push('  • ' + otherVisits.length + ' additional routine visit' + (otherVisits.length===1?'':'s') + ' logged');
+  lines.push('');
+
+  if (conversions.length) {
+    lines.push('NEW ACCOUNTS CONVERTED (prospect → active): ' + conversions.length);
+    conversions.forEach(function(c){ lines.push('  • ' + c.account_name + (c.account_town ? ' (' + c.account_town + ')' : '')); });
+    lines.push('');
+  }
+
+  if (carryWins.length) {
+    lines.push('PRODUCT WINS (new BG product now carried): ' + carryWins.length);
+    carryWins.forEach(function(c){ lines.push('  • ' + c.account_name + ' — ' + (c.field_label || c.field_key)); });
+    lines.push('');
+  }
+
+  if (reversions.length || deletions.length) {
+    lines.push('NEEDS ATTENTION — reversions/deletions: ' + (reversions.length + deletions.length));
+    reversions.forEach(function(c){ lines.push('  • ' + c.account_name + (c.account_town ? ' (' + c.account_town + ')' : '') + ' — reverted active → prospect'); });
+    deletions.forEach(function(c){ lines.push('  • ' + c.account_name + (c.account_town ? ' (' + c.account_town + ')' : '') + ' — marked deleted'); });
+    lines.push('');
+  }
+
+  if (ratingCh.length) {
+    lines.push('RATING CHANGES: ' + ratingCh.length);
+    ratingCh.forEach(function(c){ lines.push('  • ' + c.account_name + ' — ' + (c.old_value||'—') + ' → ' + (c.new_value||'—')); });
+    lines.push('');
+  }
+
+  if (personnelCh.length) {
+    lines.push('PERSONNEL CHANGES: ' + personnelCh.length);
+    personnelCh.forEach(function(c){ lines.push('  • ' + c.account_name + ' — ' + (c.field_label||c.field_key) + ': ' + (c.new_value||'—')); });
+    lines.push('');
+  }
+
+  if (storeCh.length) {
+    lines.push('STORE ACTIVITY (menus, VMA, training, etc.): ' + storeCh.length);
+    storeCh.forEach(function(c){ lines.push('  • ' + c.account_name + ' — ' + (c.field_label||c.field_key) + ': ' + (c.new_value||'—')); });
+    lines.push('');
+  }
+
+  if (highlightTu.length) {
+    lines.push('KEY TERRITORY UPDATES: ' + highlightTu.length);
+    highlightTu.forEach(function(u){ lines.push('  • [' + (u.category||'General') + '] ' + (u.notes||'')); });
+    lines.push('');
+  }
+
+  if (!conversions.length && !carryWins.length && !reversions.length && !deletions.length &&
+      !ratingCh.length && !personnelCh.length && !storeCh.length && !highlightTu.length && !visits.length) {
+    lines.push('No logged activity in this date range.');
+    lines.push('');
+  }
+
+  lines.push('— Generated from Drayton CRM');
+  return lines.join('\n');
+}
+
+function copyFunnelReportToClipboard() {
+  var textarea = document.getElementById('funnelReportText');
+  textarea.select();
+  navigator.clipboard.writeText(textarea.value).then(function(){
+    showToast('Copied to clipboard');
+  }).catch(function(){
+    // Fallback for browsers/contexts that block navigator.clipboard
+    try { document.execCommand('copy'); showToast('Copied to clipboard'); }
+    catch(e) { showToast('Could not copy — select the text manually', 'error'); }
+  });
+}
+
+// Opens a new email via mailto: — this launches whatever the device's
+// default mail handler is (Outlook if it's set as default, otherwise
+// Mail/Gmail/etc.). There's no way for a web page to specifically target
+// the Outlook app by name; mailto: is the standard, cross-platform way to
+// hand off to "whatever mail client is registered," which for most reps
+// on a company-managed device will be Outlook.
+//
+// mailto: links have a practical length ceiling in some clients (Outlook
+// desktop in particular can silently truncate very long bodies), so the
+// Copy to Clipboard button stays as a fallback for an unusually long
+// report — paste into a blank email if Outlook opens with anything cut off.
+function openFunnelReportInOutlook() {
+  var meta = window._recapMeta || {};
+  var territoryLabel = meta.territory === 'ALL' ? 'All Territories' : (meta.territory || '');
+  var dateRange = formatRecapDate(meta.start) + ' – ' + formatRecapDate(meta.end);
+  var subject = 'Funnel Report (' + dateRange + ')' + (territoryLabel ? ' — ' + territoryLabel : '');
+  var body = document.getElementById('funnelReportText').value.replace(/\n/g, '\r\n');
+  var mailto = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
 }
 
 function applyRecapSearch() {
