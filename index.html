@@ -4511,12 +4511,17 @@ async function getTerritoryAccountsForMatching(territory) {
   var sid = TERRITORY_SHEET_IDS[territory];
   if (!sid) { _territoryAccountsCache[territory] = []; return []; }
   try {
-    var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: sid, range: 'Accounts!A:E'  // account_id, territory, status, business_name — plenty for matching
+    // Two ranges: A:E covers account_id/business_name (used by Rankings/
+    // Machine matching), HU:HU is the vma_code column on its own — far
+    // cheaper than fetching the full A:HU width just for one column.
+    var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchGet({
+      spreadsheetId: sid, ranges: ['Accounts!A:E', 'Accounts!HU:HU']
     }); });
-    var rows = res.result.values || [];
-    var accts = rows.slice(1).map(function(r){ return { account_id: r[0]||'', business_name: r[3]||'' }; })
-                    .filter(function(a){ return a.account_id && a.business_name; });
+    var mainRows = (res.result.valueRanges[0].values) || [];
+    var vmaRows = (res.result.valueRanges[1].values) || [];
+    var accts = mainRows.slice(1).map(function(r, idx){
+      return { account_id: r[0]||'', business_name: r[3]||'', vma_code: (vmaRows[idx+1] && vmaRows[idx+1][0]) || '' };
+    }).filter(function(a){ return a.account_id && a.business_name; });
     _territoryAccountsCache[territory] = accts;
     return accts;
   } catch(e) {
