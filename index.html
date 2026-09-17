@@ -761,6 +761,7 @@
       <button class="btn btn-primary btn-sm" id="weeklyRecapBtn">📊 Weekly Recap</button>
       <button class="btn btn-primary btn-sm" id="rankingsViewBtn">🏆 Rankings</button>
       <button class="btn btn-primary btn-sm" id="machinesViewBtn">⚙️ Machines</button>
+      <button class="btn btn-primary btn-sm" id="vmaViewBtn">📋 VMA</button>
       <button class="btn btn-secondary btn-sm" id="repLibraryBtn" title="Templates and reference docs">📁 File Library</button>
       <button class="btn btn-secondary btn-sm" id="ptoCalendarBtn" title="See who's out">🗓 PTO Calendar</button>
     </div>
@@ -1588,6 +1589,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('weeklyRecapBtn').addEventListener('click', function(){ openWeeklyRecap(false); });
   document.getElementById('rankingsViewBtn').addEventListener('click', openRankingsView);
   document.getElementById('machinesViewBtn').addEventListener('click', openMachinesView);
+  document.getElementById('vmaViewBtn').addEventListener('click', openVMAView);
   document.getElementById('uploadRankingsBtn').addEventListener('click', function(){ if (checkManagerPin('upload a ranking report')) document.getElementById('rankingsFileInput').click(); });
   document.getElementById('uploadMachinesBtn').addEventListener('click', function(){ if (checkManagerPin('upload a machine report')) document.getElementById('machinesFileInput').click(); });
   document.getElementById('uploadVmaBtn').addEventListener('click', function(){ if (checkManagerPin('upload a VMA report')) document.getElementById('vmaFileInput').click(); });
@@ -3112,36 +3114,59 @@ function renderDetail() {
       var storeVMA = allVMAData.filter(function(v){ return v.account_id===a.account_id && v.is_store_total==='Yes'; })[0];
       var advisorRows = allVMAData.filter(function(v){ return v.account_id===a.account_id && v.is_store_total!=='Yes' && v.advisor_name; });
       if (!storeVMA && !advisorRows.length) return '';
-      var pct = function(v){ return (parseFloat(v)*100).toFixed(1)+'%'; };
+      var pct = function(v){ return ((parseFloat(v)||0)*100).toFixed(1)+'%'; };
       var dollars = function(v){ return '$'+fmtNum(v); };
       advisorRows.sort(function(x,y){ return (parseFloat(y.total_dollars)||0) - (parseFloat(x.total_dollars)||0); });
-      var shown = advisorRows.slice(0, 8);
-      var barMax = Math.max.apply(null, shown.map(function(v){ return parseFloat(v.pct_penetration)||0; }).concat([0.01]));
-      var bars = shown.map(function(v){
-        var pctPen = parseFloat(v.pct_penetration)||0;
-        var widthPct = Math.max(2, (pctPen/barMax)*100);
-        var barColor = pctPen >= 0.5 ? '#5dba7d' : pctPen >= 0.25 ? '#d4b95d' : '#d47070';
-        return '<div style="margin-bottom:6px">'+
-          '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-3);margin-bottom:2px">'+
-            '<span>'+esc(v.advisor_name)+'</span><span>'+pct(v.pct_penetration)+' penetration</span>'+
-          '</div>'+
-          '<div style="background:var(--gray-1);border-radius:3px;height:8px;overflow:hidden">'+
-            '<div style="width:'+widthPct+'%;height:100%;background:'+barColor+'"></div>'+
-          '</div>'+
+      var CAP = 10;
+      var shown = advisorRows.slice(0, CAP);
+
+      var metricBox = function(label, val){
+        return '<div style="text-align:center;padding:12px 4px;background:var(--gray-1);border-radius:6px">'+
+          '<div style="font-size:22px;font-weight:700;color:var(--gold);line-height:1">'+val+'</div>'+
+          '<div style="font-size:10px;color:var(--gray-3);margin-top:4px;font-weight:600">'+label+'</div>'+
         '</div>';
-      }).join('');
+      };
+
+      var storeGrid = storeVMA ? (
+        '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">'+
+          metricBox('% Presented', pct(storeVMA.pct_presented))+
+          metricBox('% Penetration', pct(storeVMA.pct_penetration))+
+          metricBox('$/Menu', dollars(storeVMA.dollars_per_menu))+
+          metricBox('Total $', dollars(storeVMA.total_dollars))+
+          metricBox('Hrs/Menu', (parseFloat(storeVMA.hrs_per_menu)||0).toFixed(2))+
+        '</div>'
+      ) : '<div class="field-row"><span class="field-label" style="color:var(--gray-3)">No store total row in latest upload</span></div>';
+
+      var advisorTable = shown.length ? (
+        '<div style="overflow-x:auto">'+
+        '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+          '<thead><tr style="border-bottom:1px solid var(--gray-1)">'+
+            '<th style="text-align:left;padding:6px 4px;color:var(--gray-3);font-weight:600">Advisor</th>'+
+            '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Presented</th>'+
+            '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Penetration</th>'+
+            '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">$/Menu</th>'+
+            '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Total $</th>'+
+            '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Hrs/Menu</th>'+
+          '</tr></thead><tbody>'+
+          shown.map(function(v){
+            return '<tr style="border-bottom:1px solid var(--gray-1)">'+
+              '<td style="padding:6px 4px">'+esc(v.advisor_name)+'</td>'+
+              '<td style="text-align:right;padding:6px 4px">'+pct(v.pct_presented)+'</td>'+
+              '<td style="text-align:right;padding:6px 4px">'+pct(v.pct_penetration)+'</td>'+
+              '<td style="text-align:right;padding:6px 4px">'+dollars(v.dollars_per_menu)+'</td>'+
+              '<td style="text-align:right;padding:6px 4px">'+dollars(v.total_dollars)+'</td>'+
+              '<td style="text-align:right;padding:6px 4px">'+(parseFloat(v.hrs_per_menu)||0).toFixed(2)+'</td>'+
+            '</tr>';
+          }).join('')+
+          '</tbody></table>'+
+        '</div>'+
+        (advisorRows.length>shown.length?'<div style="font-size:11px;color:var(--gray-3);margin-top:6px">+ '+(advisorRows.length-shown.length)+' more advisor'+(advisorRows.length-shown.length!==1?'s':'')+' — see full report</div>':'')
+      ) : '';
+
       return '<div class="card"><div class="card-header">📋 VMA / Menu Sales</div><div class="card-body">'+
-        (storeVMA ? (
-          '<div class="field-row"><span class="field-label">% Presented</span><span class="field-value">'+pct(storeVMA.pct_presented)+'</span></div>'+
-          '<div class="field-row"><span class="field-label">% Penetration</span><span class="field-value">'+pct(storeVMA.pct_penetration)+'</span></div>'+
-          '<div class="field-row"><span class="field-label">$ / Menu</span><span class="field-value">'+dollars(storeVMA.dollars_per_menu)+'</span></div>'+
-          '<div class="field-row"><span class="field-label">Total $</span><span class="field-value">'+dollars(storeVMA.total_dollars)+'</span></div>'+
-          '<div class="field-row"><span class="field-label">Hrs / Menu</span><span class="field-value">'+(parseFloat(storeVMA.hrs_per_menu)||0).toFixed(2)+'</span></div>'
-        ) : '<div class="field-row"><span class="field-label" style="color:var(--gray-3)">No store total row in latest upload</span></div>')+
-        (shown.length ? '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--gray-1)"><div style="font-size:11px;color:var(--gray-3);margin-bottom:8px">By Advisor — % Penetration</div>'+bars+
-          (advisorRows.length>shown.length?'<div style="font-size:11px;color:var(--gray-3);margin-top:4px">+ '+(advisorRows.length-shown.length)+' more advisor'+(advisorRows.length-shown.length!==1?'s':'')+'</div>':'')+
-        '</div>' : '')+
-        '<div style="padding-top:8px;margin-top:4px;border-top:1px solid var(--gray-1)"><a href="#" id="viewFullVmaLink" style="font-size:12px;color:var(--gold)">See full VMA report →</a></div>'+
+        storeGrid+
+        (advisorTable ? '<div style="margin-top:4px;padding-top:12px;border-top:1px solid var(--gray-1)"><div style="font-size:11px;color:var(--gray-3);margin-bottom:8px;font-weight:600">By Advisor</div>'+advisorTable+'</div>' : '')+
+        '<div style="padding-top:8px;margin-top:12px;border-top:1px solid var(--gray-1)"><a href="#" id="viewFullVmaLink" style="font-size:12px;color:var(--gold)">See full VMA report →</a></div>'+
         '</div></div>';
     }()+
     '</div>';
