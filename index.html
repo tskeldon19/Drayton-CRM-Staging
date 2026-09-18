@@ -5199,7 +5199,7 @@ function renderVMAStoreCard(store, showTerritory) {
   var st = store.storeTotal;
   var advisors = store.advisors.slice().sort(function(x,y){ return (parseFloat(y.total_dollars)||0) - (parseFloat(x.total_dollars)||0); });
   var accordionId = 'vma-acc-'+store.account_id;
-  var uploadedLabel = st && st.uploaded_at ? fmtDateDisplay(st.uploaded_at.split('T')[0]) : '';
+  var uploadedLabel = st && st.uploaded_at ? vmaLastUpdatedLabel([st]).replace('Last updated ', '') : '';
   return '<div class="card vma-store-card" style="margin-bottom:12px">'+
     '<div class="card-body">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'+
@@ -5294,7 +5294,12 @@ async function viewFullVMA(accountName, accountId) {
 
 function vmaLastUpdatedLabel(data) {
   var latest = data.reduce(function(max, v){ return (v.uploaded_at||'') > max ? (v.uploaded_at||'') : max; }, '');
-  return latest ? 'Last updated ' + fmtDateDisplay(latest.split('T')[0]) : 'No upload yet';
+  if (!latest) return 'No upload yet';
+  var d = new Date(latest);
+  if (isNaN(d.getTime())) return 'Last updated ' + fmtDateDisplay(latest.split('T')[0]);
+  var dateStr = fmtDateDisplay(latest.split('T')[0]);
+  var timeStr = d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+  return 'Last updated ' + dateStr + ' at ' + timeStr;
 }
 
 function renderVMAStatsRow() {
