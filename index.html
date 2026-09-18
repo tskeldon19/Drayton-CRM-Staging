@@ -1599,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('rankingsBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
   document.getElementById('machinesBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
   document.getElementById('vmaBackBtn').addEventListener('click', function(){ showScreen('screenDashboard'); });
-  document.getElementById('vmaSearch').addEventListener('input', renderVMATable);
+  document.getElementById('vmaSearch').addEventListener('input', function(){ _vmaFocusAccountId = null; renderVMATable(); });
   document.getElementById('uploadPreviewClose').addEventListener('click', function(){ closeModal('modalUploadPreview'); });
   document.getElementById('uploadPreviewCancel').addEventListener('click', function(){ closeModal('modalUploadPreview'); });
   document.getElementById('rankingsSearch').addEventListener('input', renderRankingsTable);
@@ -3402,7 +3402,7 @@ function renderDetail() {
   var xb = document.getElementById('expandBtn'); if(xb) xb.addEventListener('click', toggleVisits);
   var vfr = document.getElementById('viewFullRankingLink'); if(vfr) vfr.addEventListener('click', function(e){ e.preventDefault(); viewFullRanking(currentAccount.business_name); });
   var vfm = document.getElementById('viewFullMachinesLink'); if(vfm) vfm.addEventListener('click', function(e){ e.preventDefault(); viewFullMachines(currentAccount.business_name); });
-  var vfv = document.getElementById('viewFullVmaLink'); if(vfv) vfv.addEventListener('click', function(e){ e.preventDefault(); viewFullVMA(currentAccount.business_name); });
+  var vfv = document.getElementById('viewFullVmaLink'); if(vfv) vfv.addEventListener('click', function(e){ e.preventDefault(); viewFullVMA(currentAccount.business_name, currentAccount.account_id); });
 
   // Product rows — click header to expand/collapse
   document.querySelectorAll('.product-row-head').forEach(function(headEl){
@@ -5195,14 +5195,19 @@ function groupVMAByStore(data) {
 // VMA screens so they stay visually and behaviorally identical.
 function renderVMAStoreCard(store, showTerritory) {
   var pct = function(v){ return ((parseFloat(v)||0)*100).toFixed(1)+'%'; };
+  var dollars = function(v){ return '$'+fmtNum(v); };
   var st = store.storeTotal;
   var advisors = store.advisors.slice().sort(function(x,y){ return (parseFloat(y.total_dollars)||0) - (parseFloat(x.total_dollars)||0); });
   var accordionId = 'vma-acc-'+store.account_id;
+  var uploadedLabel = st && st.uploaded_at ? fmtDateDisplay(st.uploaded_at.split('T')[0]) : '';
   return '<div class="card vma-store-card" style="margin-bottom:12px">'+
     '<div class="card-body">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'+
-        '<div class="vma-store-name" data-aid="'+esc(store.account_id)+'" style="cursor:pointer;font-weight:600;color:var(--white);font-size:14px">'+esc(store.account_name)+
-          (showTerritory?' <span style="font-size:11px;color:var(--gray-3);font-weight:400">· '+esc(store.territory)+'</span>':'')+
+        '<div>'+
+          '<div class="vma-store-name" data-aid="'+esc(store.account_id)+'" style="cursor:pointer;font-weight:600;color:var(--white);font-size:14px">'+esc(store.account_name)+
+            (showTerritory?' <span style="font-size:11px;color:var(--gray-3);font-weight:400">· '+esc(store.territory)+'</span>':'')+
+          '</div>'+
+          (uploadedLabel?'<div style="font-size:11px;color:var(--gray-3);margin-top:2px">Report date: '+uploadedLabel+'</div>':'')+
         '</div>'+
         '<button type="button" class="btn btn-secondary btn-sm vma-toggle-btn" data-target="'+accordionId+'" style="font-size:11px;padding:3px 8px;flex-shrink:0">▸ '+advisors.length+' advisor'+(advisors.length!==1?'s':'')+'</button>'+
       '</div>'+
@@ -5210,18 +5215,36 @@ function renderVMAStoreCard(store, showTerritory) {
         '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px">'+
           '<div><div style="font-size:10px;color:var(--gray-3)">% Presented</div><div style="font-weight:600">'+pct(st.pct_presented)+'</div></div>'+
           '<div><div style="font-size:10px;color:var(--gray-3)">% Penetration</div><div style="font-weight:600">'+pct(st.pct_penetration)+'</div></div>'+
-          '<div><div style="font-size:10px;color:var(--gray-3)">$/Menu</div><div style="font-weight:600">$'+fmtNum(st.dollars_per_menu)+'</div></div>'+
-          '<div><div style="font-size:10px;color:var(--gray-3)">Total $</div><div style="font-weight:600">$'+fmtNum(st.total_dollars)+'</div></div>'+
+          '<div><div style="font-size:10px;color:var(--gray-3)">$/Menu</div><div style="font-weight:600">'+dollars(st.dollars_per_menu)+'</div></div>'+
+          '<div><div style="font-size:10px;color:var(--gray-3)">Total $</div><div style="font-weight:600">'+dollars(st.total_dollars)+'</div></div>'+
           '<div><div style="font-size:10px;color:var(--gray-3)">Hrs/Menu</div><div style="font-weight:600">'+(parseFloat(st.hrs_per_menu)||0).toFixed(2)+'</div></div>'+
         '</div>'
       ) : '<div style="font-size:11px;color:var(--gray-3);margin-top:8px">No store total row for this upload</div>')+
       '<div id="'+accordionId+'" style="display:none;margin-top:12px;padding-top:10px;border-top:1px solid var(--gray-1)">'+
-        (advisors.length ? advisors.map(function(v){
-          return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-1)">'+
-            '<span>'+esc(v.advisor_name)+'</span>'+
-            '<span style="color:var(--gray-3)">Presented '+pct(v.pct_presented)+' · Penetration '+pct(v.pct_penetration)+' · $'+fmtNum(v.total_dollars)+'</span>'+
-          '</div>';
-        }).join('') : '<div style="font-size:12px;color:var(--gray-3)">No advisor-level rows.</div>')+
+        (advisors.length ? (
+          '<div style="overflow-x:auto">'+
+          '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+            '<thead><tr style="border-bottom:1px solid var(--gray-1)">'+
+              '<th style="text-align:left;padding:6px 4px;color:var(--gray-3);font-weight:600">Advisor</th>'+
+              '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Presented</th>'+
+              '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Penetration</th>'+
+              '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">$/Menu</th>'+
+              '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Total $</th>'+
+              '<th style="text-align:right;padding:6px 4px;color:var(--gray-3);font-weight:600">Hrs/Menu</th>'+
+            '</tr></thead><tbody>'+
+            advisors.map(function(v){
+              return '<tr style="border-bottom:1px solid var(--gray-1)">'+
+                '<td style="padding:6px 4px">'+esc(v.advisor_name)+'</td>'+
+                '<td style="text-align:right;padding:6px 4px">'+pct(v.pct_presented)+'</td>'+
+                '<td style="text-align:right;padding:6px 4px">'+pct(v.pct_penetration)+'</td>'+
+                '<td style="text-align:right;padding:6px 4px">'+dollars(v.dollars_per_menu)+'</td>'+
+                '<td style="text-align:right;padding:6px 4px">'+dollars(v.total_dollars)+'</td>'+
+                '<td style="text-align:right;padding:6px 4px">'+(parseFloat(v.hrs_per_menu)||0).toFixed(2)+'</td>'+
+              '</tr>';
+            }).join('')+
+            '</tbody></table>'+
+          '</div>'
+        ) : '<div style="font-size:12px;color:var(--gray-3)">No advisor-level rows.</div>')+
       '</div>'+
     '</div></div>';
 }
@@ -5245,19 +5268,33 @@ function wireVMACards(containerEl) {
 
 // Per-territory view — reuses the same allVMAData already loaded for the
 // current territory, so it opens instantly with no extra fetch.
+var _vmaFocusAccountId = null;
+
 async function openVMAView() {
+  _vmaFocusAccountId = null;
   showScreen('screenVMA');
+  document.getElementById('vmaSearch').value = '';
   document.getElementById('vmaContent').innerHTML = '<div class="loading"><div class="spinner"></div>Loading VMA data...</div>';
   renderVMAStatsRow();
   renderVMATable();
 }
 
-async function viewFullVMA(accountName) {
+// Jumps straight to one account's VMA data by account_id — not by matching
+// its name against what's stored in VMA Data, since the two can differ
+// (the CRM's own name vs. whatever the SmartVMA report called it) and a
+// text search would silently come up empty for anything not an exact match.
+async function viewFullVMA(accountName, accountId) {
   previousScreen = 'screenDetail';
   showScreen('screenVMA');
-  renderVMAStatsRow();
+  _vmaFocusAccountId = accountId || null;
   document.getElementById('vmaSearch').value = accountName || '';
+  renderVMAStatsRow();
   renderVMATable();
+}
+
+function vmaLastUpdatedLabel(data) {
+  var latest = data.reduce(function(max, v){ return (v.uploaded_at||'') > max ? (v.uploaded_at||'') : max; }, '');
+  return latest ? 'Last updated ' + fmtDateDisplay(latest.split('T')[0]) : 'No upload yet';
 }
 
 function renderVMAStatsRow() {
@@ -5274,9 +5311,12 @@ function renderVMAStatsRow() {
 
 function renderVMATable() {
   var q = (document.getElementById('vmaSearch').value||'').toLowerCase();
-  var stores = groupVMAByStore(allVMAData).filter(function(s){ return !q || s.account_name.toLowerCase().indexOf(q)>=0; });
+  var stores = groupVMAByStore(allVMAData).filter(function(s){
+    if (_vmaFocusAccountId) return s.account_id === _vmaFocusAccountId;
+    return !q || s.account_name.toLowerCase().indexOf(q)>=0;
+  });
 
-  document.getElementById('vmaMeta').textContent = stores.length+' store'+(stores.length!==1?'s':'')+' · '+currentTerritory;
+  document.getElementById('vmaMeta').textContent = stores.length+' store'+(stores.length!==1?'s':'')+' · '+currentTerritory+' · '+vmaLastUpdatedLabel(allVMAData);
 
   if (!stores.length) {
     document.getElementById('vmaContent').innerHTML =
@@ -5330,7 +5370,7 @@ function renderCompanyVMAView() {
   var data = allCompanyVMAData.filter(function(v){ return scope==='ALL' || v.territory===scope; });
   var stores = groupVMAByStore(data).filter(function(s){ return !q || s.account_name.toLowerCase().indexOf(q)>=0; });
 
-  document.getElementById('companyVmaMeta').textContent = stores.length+' store'+(stores.length!==1?'s':'')+(scope!=='ALL'?' · '+scope:' · All Territories');
+  document.getElementById('companyVmaMeta').textContent = stores.length+' store'+(stores.length!==1?'s':'')+(scope!=='ALL'?' · '+scope:' · All Territories')+' · '+vmaLastUpdatedLabel(data);
 
   var withTotals = stores.filter(function(s){ return s.storeTotal; });
   var avgPresented = withTotals.length ? withTotals.reduce(function(s,x){ return s+(parseFloat(x.storeTotal.pct_presented)||0); },0)/withTotals.length : 0;
@@ -6332,6 +6372,7 @@ async function handleVMAUpload(evt) {
       g.account_id = hit.account.account_id;
       g.territory = hit.territory;
       g.match_confidence = 1.0;
+      g.matched_business_name = hit.account.business_name;
       exactCodeCount++; matched++;
       return;
     }
@@ -6352,6 +6393,7 @@ async function handleVMAUpload(evt) {
       g.account_id = best.account_id;
       g.territory = bestTerr;
       g.match_confidence = bestScore;
+      g.matched_business_name = best.business_name;
       matched++;
       if (bestScore < 0.999) fuzzyCount++;
       pendingAliases.push({
@@ -6403,12 +6445,29 @@ async function confirmVMAUpload() {
     for (var terr in byTerritory) {
       var sid = TERRITORY_SHEET_IDS[terr];
       if (!sid) continue;
+
+      // Only the accounts actually present in THIS upload get replaced —
+      // everything else in the tab is preserved. This matters whenever an
+      // upload doesn't cover every dealer (a filtered report from a
+      // different group, a partial re-send, etc.) so it can never wipe out
+      // other stores' most recent data.
+      var newAccountIds = {};
+      byTerritory[terr].forEach(function(g){ newAccountIds[g.account_id] = true; });
+
+      var keptExisting = [];
+      try {
+        var exRes = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: sid, range: 'VMA Data!A2:Y'
+        }); });
+        keptExisting = (exRes.result.values || []).filter(function(row){ return !newAccountIds[row[1]]; });
+      } catch(readErr) { console.error('Could not read existing VMA data for '+terr+' — proceeding with new rows only', readErr); }
+
       var rows = [];
       byTerritory[terr].forEach(function(g){
         g.rows.forEach(function(r){
           rows.push([
             'VMA'+Date.now()+Math.random().toString(36).slice(2,6),
-            g.account_id, g.account_name, terr,
+            g.account_id, g.matched_business_name || g.account_name, terr,
             r.advisor_code, r.advisor_name, r.is_store_total ? 'Yes' : 'No',
             r.ros, r.presented, r.pct_presented, r.sold, r.pct_penetration,
             r.menu_dollars, r.alacarte_dollars, r.total_dollars, r.dollars_per_menu,
@@ -6417,14 +6476,15 @@ async function confirmVMAUpload() {
           ]);
         });
       });
+      var merged = keptExisting.concat(rows);
       try {
         await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.clear({
           spreadsheetId: sid, range: 'VMA Data!A2:Y'
         }); });
-        if (rows.length) {
+        if (merged.length) {
           await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: sid, range: 'VMA Data!A2',
-            valueInputOption: 'RAW', resource: {values: rows}
+            valueInputOption: 'RAW', resource: {values: merged}
           }); });
         }
       } catch(terrErr) {
