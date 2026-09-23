@@ -7701,7 +7701,15 @@ function copyFunnelReportToClipboard() {
 // on which mail handler intercepts the link, and we don't have that data
 // yet. The link's actual length is logged to the console every time so it
 // can be calibrated precisely once we see where a real failure happens.
-var MAILTO_SAFE_LENGTH = 6000;
+// This number is a guess, not a measured limit — the real ceiling depends
+// on which mail handler intercepts the link, and we don't have that data
+// yet. A report at 7,932 encoded characters (8 routine visits, no key
+// visits) was confirmed to need to push fully, so this sits comfortably
+// above that. The link's actual length is logged to the console every
+// time so the real ceiling can be pinned exactly once a genuine failure
+// happens again — check the console log at that point and report the
+// number back rather than guessing further.
+var MAILTO_SAFE_LENGTH = 12000;
 
 function openFunnelReportInOutlook() {
   var meta = window._recapMeta || {};
