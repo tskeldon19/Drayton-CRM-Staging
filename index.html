@@ -7691,20 +7691,29 @@ function copyFunnelReportToClipboard() {
 // WEB-BASED mail handlers (Gmail's web mailto interceptor, Outlook's web
 // mailto interceptor) have a hard length ceiling and reject the whole link
 // outright once it's too long — unlike a real desktop client, which just
-// truncates. A full week's visit notes can easily exceed that. Rather than
-// trying to guess a safe length, the mailto link here NEVER carries the
-// body — only the subject (always short, so this can't fail) — and the
-// full report is copied to the clipboard at the same moment the email
-// opens. One paste finishes it, and this works identically regardless of
-// report length.
+// truncates. So: when the full subject+body fits comfortably under that
+// ceiling, it's sent as normal — fully pre-filled, no extra step. Only
+// once it would exceed the safe length does this fall back to a
+// short, subject-only link plus an automatic clipboard copy, so a long
+// report degrades gracefully instead of breaking outright.
+var MAILTO_SAFE_LENGTH = 1800;
+
 function openFunnelReportInOutlook() {
   var meta = window._recapMeta || {};
   var territoryLabel = meta.territory === 'ALL' ? 'All Territories' : (meta.territory || '');
   var dateRange = formatRecapDate(meta.start) + ' – ' + formatRecapDate(meta.end);
   var subject = 'Funnel Report (' + dateRange + ')' + (territoryLabel ? ' — ' + territoryLabel : '');
-  var mailto = 'mailto:?subject=' + encodeURIComponent(subject);
-
   var textarea = document.getElementById('funnelReportText');
+  var body = textarea.value.replace(/\n/g, '\r\n');
+  var fullMailto = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+
+  if (fullMailto.length <= MAILTO_SAFE_LENGTH) {
+    window.location.href = fullMailto;
+    return;
+  }
+
+  // Too long to trust a pre-filled body — short link + auto-copy instead.
+  var shortMailto = 'mailto:?subject=' + encodeURIComponent(subject);
   textarea.select();
   navigator.clipboard.writeText(textarea.value).then(function(){
     showToast('Report copied — paste it into the email that just opened');
@@ -7712,8 +7721,7 @@ function openFunnelReportInOutlook() {
     try { document.execCommand('copy'); showToast('Report copied — paste it into the email that just opened'); }
     catch(e) { showToast('Could not copy automatically — use Copy to Clipboard, then paste into the email', 'error'); }
   });
-
-  window.location.href = mailto;
+  window.location.href = shortMailto;
 }
 
 function applyRecapSearch() {
