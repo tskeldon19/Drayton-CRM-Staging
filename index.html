@@ -7696,7 +7696,12 @@ function copyFunnelReportToClipboard() {
 // once it would exceed the safe length does this fall back to a
 // short, subject-only link plus an automatic clipboard copy, so a long
 // report degrades gracefully instead of breaking outright.
-var MAILTO_SAFE_LENGTH = 1800;
+//
+// This number is a guess, not a measured limit — the real ceiling depends
+// on which mail handler intercepts the link, and we don't have that data
+// yet. The link's actual length is logged to the console every time so it
+// can be calibrated precisely once we see where a real failure happens.
+var MAILTO_SAFE_LENGTH = 6000;
 
 function openFunnelReportInOutlook() {
   var meta = window._recapMeta || {};
@@ -7706,6 +7711,7 @@ function openFunnelReportInOutlook() {
   var textarea = document.getElementById('funnelReportText');
   var body = textarea.value.replace(/\n/g, '\r\n');
   var fullMailto = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  console.log('Funnel report mailto link length: ' + fullMailto.length + ' (threshold: ' + MAILTO_SAFE_LENGTH + ')');
 
   if (fullMailto.length <= MAILTO_SAFE_LENGTH) {
     window.location.href = fullMailto;
