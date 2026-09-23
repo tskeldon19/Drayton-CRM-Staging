@@ -7688,10 +7688,14 @@ function copyFunnelReportToClipboard() {
 // the Outlook app by name; mailto: is the standard, cross-platform way to
 // hand off to "whatever mail client is registered."
 //
-// mailto: links have a practical length ceiling in some clients (Outlook
-// desktop in particular can silently truncate very long bodies), so Copy
-// to Clipboard stays as a fallback for an unusually long report — paste
-// into a blank email if Outlook opens with anything cut off.
+// mailto: links have a hard length ceiling in WEB-BASED mail handlers
+// (Gmail's web mailto interceptor, Outlook's web mailto interceptor) —
+// unlike a real desktop client, which just truncates a too-long body, these
+// reject the whole link outright once the encoded URL gets too long, which
+// a full week's worth of visit notes can easily do. Checked up front so a
+// long report fails with a clear message instead of a broken browser page.
+var MAILTO_SAFE_LENGTH = 1800;
+
 function openFunnelReportInOutlook() {
   var meta = window._recapMeta || {};
   var territoryLabel = meta.territory === 'ALL' ? 'All Territories' : (meta.territory || '');
@@ -7699,6 +7703,12 @@ function openFunnelReportInOutlook() {
   var subject = 'Funnel Report (' + dateRange + ')' + (territoryLabel ? ' — ' + territoryLabel : '');
   var body = document.getElementById('funnelReportText').value.replace(/\n/g, '\r\n');
   var mailto = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+
+  if (mailto.length > MAILTO_SAFE_LENGTH) {
+    copyFunnelReportToClipboard();
+    showToast('Report too long for Open in Outlook to handle reliably — copied to clipboard instead. Paste into a new email.', 'error');
+    return;
+  }
   window.location.href = mailto;
 }
 
