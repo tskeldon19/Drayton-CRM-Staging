@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Drayton CRM v10.0 - built 2026-07-09 -->
+<!-- Drayton CRM v10.1 (STAGING) - built 2026-09-24 — data-safety fix release: row verification, token refresh, local dates -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1212,7 +1212,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const CLIENT_ID = '924244663332-thkq7g17smrm1j2jpbhrsutnb4dt6tbk.apps.googleusercontent.com';
-const SHEET_ID  = '1juYkIPEVznsWV8J-ivcs60yU5NsrL4xXmx4C2AtctHA';
+const SHEET_ID  = '1LWXdxCLoxowcBcaw4fg-aMa26rc-tFeCFCN_96K2bFQ'; // STAGING (fallback only)
 
 // Territory → Sheet ID map (add entries as territories are onboarded)
 // Confirmed multi-location dealer groups, from an initial pass across all
@@ -1516,7 +1516,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('ptoAddModalClose').addEventListener('click', function(){ closeModal('modalPTOAdd'); });
   document.getElementById('ptoAddCancelBtn').addEventListener('click', function(){ closeModal('modalPTOAdd'); });
   document.getElementById('ptoAddSaveBtn').addEventListener('click', function(){ guardedSave(savePTOEntry); });
-  document.getElementById('ptoDeleteBtn').addEventListener('click', deletePTOEntry);
+  document.getElementById('ptoDeleteBtn').addEventListener('click', function(){ guardedSave(deletePTOEntry); });
   document.getElementById('companyBackBtn').addEventListener('click', function(){ goToTerritorySelect(); });
   document.getElementById('companyTabProspect').addEventListener('click', function(){ switchCompanyTab('prospect'); });
   document.getElementById('companyTabActive').addEventListener('click', function(){ switchCompanyTab('active'); });
@@ -1786,6 +1786,7 @@ function ensureFreshToken() {
     };
     tokenClient.callback = function(resp){
       if (resp.error) console.error('Silent token refresh failed', resp);
+      else markTokenIssued();
       finish();
     };
     setTimeout(finish, 4000); // never block a screen load waiting on this
@@ -1845,13 +1846,20 @@ function isRetryableError(e) {
 // Retries a Sheets API call (or any promise-returning function) on rate-limit
 // or timeout errors, with a short growing delay between attempts, and a hard
 // per-call timeout so a stuck request can never hang the whole operation.
-function withRetry(fn, retries) {
+function withRetry(fn, retries, _authRetried) {
   retries = retries === undefined ? 3 : retries;
   return withTimeout(fn).catch(function(e){
+    // Expired session (401): force one silent token refresh, then retry the
+    // call once. Only 401 — a 403 is usually a real sharing problem.
+    var code = (e && e.status) || (e && e.result && e.result.error && e.result.error.code);
+    if (code === 401 && !_authRetried) {
+      _tokenIssuedAt = 0;
+      return ensureFreshToken().then(function(){ return withRetry(fn, retries, true); });
+    }
     if (retries > 0 && isRetryableError(e)) {
       var delay = (4 - retries) * 800 + 400; // 400ms, 1200ms, 2000ms
       return new Promise(function(resolve){ setTimeout(resolve, delay); }).then(function(){
-        return withRetry(fn, retries - 1);
+        return withRetry(fn, retries - 1, _authRetried);
       });
     }
     throw e;
@@ -1882,6 +1890,7 @@ function gisLoaded() {
     client_id: CLIENT_ID, scope: SCOPES,
     callback: function(resp) {
       if (resp.error) { showToast('Sign-in failed','error'); return; }
+      markTokenIssued();
       goToTerritorySelect();
       document.getElementById('authArea').innerHTML =
         '<div class="user-info">'+
@@ -1987,10 +1996,84 @@ async function guardedSave(fn) {
   if (_saveInFlight) return;
   _saveInFlight = true;
   try {
+    // Refresh the Google token first if it's getting old, so a save made
+    // after the iPad sat idle doesn't fail halfway through on an expired
+    // session (iPad Safari blocks the silent background refresh).
+    await ensureFreshTokenIfStale();
     await fn();
   } finally {
     _saveInFlight = false;
   }
+}
+
+// ── Token age ──────────────────────────────────────────────────────────────
+// Google access tokens last ~60 minutes. We record when the last one was
+// issued and only do a silent refresh when it's past TOKEN_REFRESH_AFTER_MS,
+// so ordinary saves don't pay for a round trip to Google every time.
+var _tokenIssuedAt = 0;
+var TOKEN_REFRESH_AFTER_MS = 45 * 60 * 1000;
+function markTokenIssued() { _tokenIssuedAt = Date.now(); }
+async function ensureFreshTokenIfStale() {
+  if (!_tokenIssuedAt || (Date.now() - _tokenIssuedAt) > TOKEN_REFRESH_AFTER_MS) {
+    await ensureFreshToken();
+  }
+}
+
+// ── Row verification ───────────────────────────────────────────────────────
+// Every write that targets a specific row number must confirm that row still
+// holds the record we think it does. Row numbers are cached when a territory
+// loads; if anything shifts rows after that (a row deleted or sorted in the
+// sheet, a part number removed, another device's change), writing to the
+// cached number would silently overwrite a DIFFERENT record.
+//
+// resolveSheetRow() checks column A of the cached row. If it matches, it
+// returns it (one tiny read). If not, it re-reads column A, rebuilds the
+// whole row map in place (same object, so the territory cache stays in
+// sync), and returns the record's real row — or null if it's gone.
+// On a network error it shows a toast and returns null: callers treat null
+// as "don't write", so a failed check can never lead to a wrong-row write.
+var _rowResolveError = false;
+async function resolveSheetRow(spreadsheetId, tab, id, rowMap) {
+  _rowResolveError = false;
+  if (!id) return null;
+  var cachedRow = rowMap ? rowMap[id] : null;
+  try {
+    if (cachedRow) {
+      var one = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId, range: "'"+tab+"'!A"+cachedRow
+      }); });
+      var v = one.result.values && one.result.values[0] && one.result.values[0][0];
+      if (v === id) return cachedRow;
+    }
+    var colRes = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: spreadsheetId, range: "'"+tab+"'!A:A"
+    }); });
+    var ids = colRes.result.values || [];
+    var found = null;
+    if (rowMap) Object.keys(rowMap).forEach(function(k){ delete rowMap[k]; });
+    ids.forEach(function(r, i){
+      var rid = r && r[0];
+      if (!rid || i === 0) return;
+      if (rowMap) rowMap[rid] = i + 1;
+      if (rid === id) found = i + 1;
+    });
+    if (cachedRow && found !== cachedRow) console.warn('[resolveSheetRow] '+tab+': '+id+' expected at row '+cachedRow+', actually at '+found);
+    return found;
+  } catch(e) {
+    _rowResolveError = true;
+    console.error('[resolveSheetRow]', e);
+    showToast(describeApiError(e, "Couldn't confirm the record's row before saving — nothing was changed"), 'error');
+    return null;
+  }
+}
+function resolveAccountRow(accountId) { return resolveSheetRow(territorySheetId(currentTerritory), 'Accounts', accountId, sheetRowMap); }
+function resolveVisitRow(visitId)     { return resolveSheetRow(territorySheetId(currentTerritory), 'Visits', visitId, visitRowMap); }
+function resolvePartRow(partId)       { return resolveSheetRow(territorySheetId(currentTerritory), 'Product Part Numbers', partId, partRowMap); }
+function resolvePTORow(ptoId)         { return resolveSheetRow(PTO_SHEET_ID, 'PTO', ptoId, ptoRowMap); }
+// Shown when a row lookup comes back empty. Skipped if resolveSheetRow
+// already showed a network-error toast, so that clearer message stays up.
+function rowNotFoundToast() {
+  if (!_rowResolveError) showToast("This record couldn't be found on the sheet — pull down to refresh and try again", 'error');
 }
 
 // One-time migration: "Other 1" used to be a free-text role slot; now it's a
@@ -2412,7 +2495,7 @@ async function completeFollowup(accountId, source, visitId) {
     var acc = allAccounts.find(function(a){ return a.account_id === accountId; });
     if (!acc) { showToast('Account not found','error'); return; }
     var oldDate = acc.next_followup;
-    var rowNum = sheetRowMap[accountId];
+    var rowNum = await resolveAccountRow(accountId);
     if (rowNum) {
       await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: territorySheetId(currentTerritory),
@@ -2427,7 +2510,7 @@ async function completeFollowup(accountId, source, visitId) {
     // leave followup_notes exactly as the rep wrote it.
     var matchingVisit = allVisits.find(function(v){ return v.account_id === accountId && v.followup_date === oldDate; });
     if (matchingVisit) {
-      var vRowNum = visitRowMap[matchingVisit.visit_id];
+      var vRowNum = await resolveVisitRow(matchingVisit.visit_id);
       if (vRowNum) {
         await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
           spreadsheetId: territorySheetId(currentTerritory),
@@ -2440,7 +2523,7 @@ async function completeFollowup(accountId, source, visitId) {
   } else if (source === 'visit') {
     var v = allVisits.find(function(x){ return x.visit_id === visitId; });
     if (!v) { showToast('Visit not found','error'); return; }
-    var vRowNum2 = visitRowMap[visitId];
+    var vRowNum2 = await resolveVisitRow(visitId);
     if (vRowNum2) {
       await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId: territorySheetId(currentTerritory),
@@ -2635,8 +2718,8 @@ function renderMetricFilterList(accounts, metricKey) {
       extra = '<span style="color:#d4ac0d">'+names.join(', ')+'</span>';
     }
     return '<div class="account-row" data-id="'+a.account_id+'">'+
-      '<div><div class="name">'+a.business_name+'</div>'+
-      '<div class="meta">'+[a.town,a.state].filter(Boolean).join(', ')+(extra?' · '+extra:'')+'</div></div>'+
+      '<div><div class="name">'+esc(a.business_name)+'</div>'+
+      '<div class="meta">'+esc([a.town,a.state].filter(Boolean).join(', '))+(extra?' · '+extra:'')+'</div></div>'+
       '<div class="right"><span class="status-pill '+(a.status==='active'?'pill-active':'pill-prospect')+'">'+a.status+'</span>'+
       '<div class="rating-badge '+rc+'">'+(r||'—')+'</div></div></div>';
   }).join('');
@@ -2734,7 +2817,7 @@ function renderList() {
       (selectMode?'<input type="checkbox" class="select-checkbox" data-id="'+a.account_id+'"'+
         (isSelected?' checked':'')+
         (isExisting?' disabled style="opacity:0.4" title="Already in this list"':'')+'>':'')+
-      '<div style="flex:1"><div class="name">'+a.business_name+' '+typeBadge+
+      '<div style="flex:1"><div class="name">'+esc(a.business_name)+' '+typeBadge+
         (isExisting?' <span style="font-size:10px;color:var(--gray-3);font-weight:400">✓ In list</span>':'')+
       '</div>'+
       '<div class="meta">'+[a.town,a.state].filter(Boolean).join(', ')+(a.owner_name?' · '+a.owner_name:a.sm_name?' · '+a.sm_name:'')+' · <span style="color:var(--gray-3)">'+lastVisitStr+'</span></div></div>'+
@@ -3443,7 +3526,7 @@ function renderDetail() {
   document.querySelectorAll('.remove-part-btn').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.stopPropagation();
-      removeProductPart(btn.dataset.partId);
+      guardedSave(function(){ return removeProductPart(btn.dataset.partId); });
     });
   });
   document.querySelectorAll('.edit-part-btn').forEach(function(btn){
@@ -3499,10 +3582,15 @@ async function addProductPart(pkey) {
   var pid = 'PART'+Date.now();
   var now = new Date().toISOString();
   try {
-    await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.append({
+    var ppRes = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.append({
       spreadsheetId: territorySheetId(currentTerritory), range: 'Product Part Numbers!A:I',
       valueInputOption:'RAW', resource:{values:[[pid,a.account_id,a.business_name,currentTerritory,pkey,partNum,spiff,notes,now]]}
     }); });
+    // Record the new row so this part can be edited/removed right away,
+    // without waiting for a reload.
+    var ppRange = ppRes && ppRes.result && ppRes.result.updates && ppRes.result.updates.updatedRange;
+    var ppMatch = ppRange && ppRange.match(/![A-Z]+(\d+)/);
+    if (ppMatch) partRowMap[pid] = parseInt(ppMatch[1], 10);
     allProductParts.push({part_id:pid,account_id:a.account_id,account_name:a.business_name,territory:currentTerritory,
       product_key:pkey,part_number:partNum,spiff_amount:spiff,notes:notes,added_at:now});
     showToast('Part number added ✓');
@@ -3515,9 +3603,10 @@ async function saveEditedPart(partId) {
   var spiff   = document.getElementById('editPartSpiff_'+partId).value.trim();
   var notes   = document.getElementById('editPartNotes_'+partId).value.trim();
   if (!partNum) { showToast('Part number cannot be blank','error'); return; }
-  var rowNum = partRowMap[partId];
   var p = allProductParts.find(function(x){ return x.part_id===partId; });
-  if (!rowNum || !p) { showToast('Could not find that part number','error'); return; }
+  if (!p) { showToast('Could not find that part number','error'); return; }
+  var rowNum = await resolvePartRow(partId);
+  if (!rowNum) { rowNotFoundToast(); return; }
   try {
     await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: territorySheetId(currentTerritory), range: 'Product Part Numbers!F'+rowNum+':H'+rowNum,
@@ -3531,7 +3620,8 @@ async function saveEditedPart(partId) {
 
 async function removeProductPart(partId) {
   if (!confirm('Remove this part number?')) return;
-  var rowNum = partRowMap[partId];
+  var rowNum = await resolvePartRow(partId);
+  if (!rowNum && _rowResolveError) return; // couldn't verify — don't touch the sheet
   try {
     if (rowNum) {
       var sheetMeta = await withRetry(function(){ return gapi.client.sheets.spreadsheets.get({spreadsheetId:territorySheetId(currentTerritory)}); });
@@ -3540,6 +3630,10 @@ async function removeProductPart(partId) {
         spreadsheetId: territorySheetId(currentTerritory),
         resource:{requests:[{deleteDimension:{range:{sheetId:ppSheet.properties.sheetId,dimension:'ROWS',startIndex:rowNum-1,endIndex:rowNum}}}]}
       }); });
+      // Every row below the deleted one just moved up by one — keep the map
+      // in step so the next edit/remove this session hits the right row.
+      delete partRowMap[partId];
+      Object.keys(partRowMap).forEach(function(k){ if (partRowMap[k] > rowNum) partRowMap[k]--; });
     }
     allProductParts = allProductParts.filter(function(p){ return p.part_id!==partId; });
     showToast('Part number removed ✓');
@@ -3581,7 +3675,7 @@ async function saveProductDetails(pkey) {
   a[pkey+'_cp_ro_pct'] = cpRoPct;
   a[pkey+'_carrying'] = carryingAfter;
 
-  var rowNum = sheetRowMap[a.account_id];
+  var rowNum = await resolveAccountRow(a.account_id);
   if (rowNum) {
     var fields = [pkey+'_profile_pricing', pkey+'_training', pkey+'_part_number', pkey+'_part_notes', pkey+'_spiff', pkey+'_cp_ro_pct', pkey+'_status', pkey+'_carrying'];
     var data = fields.map(function(f){
@@ -3634,7 +3728,7 @@ async function toggleVisitHighlight(vid) {
   if (!v) return;
   var newVal = (v.is_highlight||'').toLowerCase()==='yes' ? '' : 'Yes';
   v.is_highlight = newVal;
-  var rowNum = visitRowMap[vid];
+  var rowNum = await resolveVisitRow(vid);
   if (rowNum) {
     try {
       await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
@@ -3653,7 +3747,7 @@ function openActivityLog(fieldKey, fieldLabel) {
   _activityLogFieldKey   = fieldKey;
   _activityLogFieldLabel = fieldLabel;
   document.getElementById('activityLogTitle').textContent = 'Log: '+fieldLabel;
-  document.getElementById('activityLogDate').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('activityLogDate').value  = localTodayKey();
   document.getElementById('activityLogNotes').value = '';
 
   // Show history for this field on this account
@@ -3688,7 +3782,7 @@ async function saveActivityLog() {
       valueInputOption:'RAW', resource:{values:[row]}
     }); });
     // Update the cache field on the Accounts sheet with the new date
-    var rowNum = sheetRowMap[currentAccount.account_id];
+    var rowNum = await resolveAccountRow(currentAccount.account_id);
     if (rowNum && COL[_activityLogFieldKey] !== undefined) {
       await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
         spreadsheetId:territorySheetId(currentTerritory),
@@ -3956,7 +4050,7 @@ async function saveVisitEdit() {
   v.visit_date=date; v.attendees=attend; v.notes=notes;
   v.followup_date=fu; v.followup_notes=fuN; v.is_highlight=hl; v.followup_prep_date=fuPrep;
 
-  var rowNum = visitRowMap[v.visit_id];
+  var rowNum = await resolveVisitRow(v.visit_id);
   if (rowNum) {
     try {
       await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
@@ -3967,7 +4061,7 @@ async function saveVisitEdit() {
     } catch(e) { showToast(describeApiError(e, 'Error saving visit'),'error'); console.error(e); return; }
   }
   // Also update last_visit and next_followup on account if these changed
-  var accRowNum = sheetRowMap[currentAccount.account_id];
+  var accRowNum = await resolveAccountRow(currentAccount.account_id);
   if (accRowNum) {
     if (date) { currentAccount.last_visit = date; }
     if (fu)   { currentAccount.next_followup = fu; }
@@ -4261,12 +4355,19 @@ async function deletePTOEntry() {
   if (!_editingPTOId) return;
   var p = allPTOEntries.find(function(x){ return x.pto_id===_editingPTOId; });
   if (!p || !confirm('Delete PTO entry for "'+p.name+'" ('+p.start_date+' to '+p.end_date+')?')) return;
-  var rowNum = ptoRowMap[_editingPTOId];
+  var rowNum = await resolvePTORow(_editingPTOId);
+  if (!rowNum && _rowResolveError) return; // couldn't verify — don't touch the sheet
   try {
     if (rowNum) {
+      // Look the PTO tab up by name — the old code assumed it was the first
+      // tab (sheetId 0), which would delete from the wrong tab if the PTO
+      // sheet's tabs were ever reordered or recreated.
+      var ptoMeta = await withRetry(function(){ return gapi.client.sheets.spreadsheets.get({spreadsheetId: PTO_SHEET_ID}); });
+      var ptoTab = ptoMeta.result.sheets.find(function(sh){ return sh.properties.title === 'PTO'; });
+      if (!ptoTab) { showToast('PTO tab not found on the PTO sheet — nothing was deleted','error'); return; }
       await withRetry(function(){ return gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: PTO_SHEET_ID,
-        resource: { requests: [{ deleteDimension: { range: { sheetId: 0, dimension: 'ROWS', startIndex: rowNum-1, endIndex: rowNum } } }] }
+        resource: { requests: [{ deleteDimension: { range: { sheetId: ptoTab.properties.sheetId, dimension: 'ROWS', startIndex: rowNum-1, endIndex: rowNum } } }] }
       }); });
     }
     allPTOEntries = allPTOEntries.filter(function(x){ return x.pto_id!==_editingPTOId; });
@@ -4288,7 +4389,8 @@ async function savePTOEntry() {
 
   try {
     if (_editingPTOId) {
-      var rowNum = ptoRowMap[_editingPTOId];
+      var rowNum = await resolvePTORow(_editingPTOId);
+      if (!rowNum) { rowNotFoundToast(); return; }
       var existing = allPTOEntries.find(function(x){ return x.pto_id===_editingPTOId; });
       var addedAt = existing ? existing.added_at : new Date().toISOString();
       if (rowNum) {
@@ -5659,7 +5761,7 @@ async function pullAllTerritoriesForMaster() {
     while (out.length < width) out.push('');
     return out;
   }
-  var ACCOUNTS_WIDTH = Object.keys(COL).length; // 228 — matches Accounts!A:HU
+  var ACCOUNTS_WIDTH = Object.keys(COL).length; // 229 — matches Accounts!A:HU
 
   results.forEach(function(r){
     r.accRows.slice(1).forEach(function(row){
@@ -5701,7 +5803,9 @@ async function refreshCompanyMasterDataInner() {
   var now = new Date().toISOString();
 
   try {
-    var clearRanges = ['Accounts!A2:GE','Change Log!A2:H','Rankings!A2:K','Machine Data!A2:Z','Visits!A2:J','Territory Updates!A2:H','Meta!A2:B'];
+    // Clear widths must match what's written below — Accounts derives from
+    // COL so it can't fall behind the schema again.
+    var clearRanges = ['Accounts!A2:'+colLetter(Object.keys(COL).length-1),'Change Log!A2:H','Rankings!A2:K','Machine Data!A2:Z','Visits!A2:K','Territory Updates!A2:H','Meta!A2:B'];
     await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchClear({
       spreadsheetId: COMPANY_MASTER_SHEET_ID, resource: { ranges: clearRanges }
     }); });
@@ -7101,7 +7205,7 @@ async function saveNewList() {
   var name = document.getElementById('newListName').value.trim();
   if (!name) { showToast('Please enter a list name','error'); return; }
   var lid = 'LL'+Date.now();
-  var created = new Date().toISOString().split('T')[0];
+  var created = localTodayKey();
   var row = [lid, name, currentTerritory, '', created];
   console.log('[saveNewList] Attempting to save:', row);
   console.log('[saveNewList] Target sheet:', territorySheetId(currentTerritory));
@@ -7310,7 +7414,8 @@ function openListInMaps() {
 const ALL_TERRITORIES = ['Route 101','Route 102','Route 105','Route 111','Route 112',
                           'Route 135','Route 137','Route 141','Route 143','Route 147'];
 
-function toISO(d){ return d.toISOString().split('T')[0]; }
+// Local calendar day (not UTC) — see localTodayKey().
+function toISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function getMonday(d) {
   var date = new Date(d); date.setHours(0,0,0,0);
@@ -7924,8 +8029,8 @@ function toggleVisits() {
 }
 
 async function updateStatus(newStatus) {
-  var rowNum = sheetRowMap[currentAccount.account_id];
-  if (!rowNum) { showToast('Row not found','error'); return; }
+  var rowNum = await resolveAccountRow(currentAccount.account_id);
+  if (!rowNum) { rowNotFoundToast(); return; }
   try {
     await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId:territorySheetId(currentTerritory), range:'Accounts!C'+rowNum,
@@ -8001,7 +8106,7 @@ async function convertToActive() {
     }
   });
 
-  var rowNum = sheetRowMap[a.account_id];
+  var rowNum = await resolveAccountRow(a.account_id);
   if (rowNum) {
     var fieldsToSync = ['competitor_product','competitor_name','rating','general_notes','interested'];
     BG_PRODUCTS.forEach(function(p){ fieldsToSync.push(p.key+'_status'); });
@@ -8257,8 +8362,8 @@ async function deletePersonnelFromModal(pid) {
 async function saveAccount() {
   var before = window._editSnapshot || {};
   collectEditFields();
-  var rowNum = sheetRowMap[currentAccount.account_id];
-  if (!rowNum) { showToast('Row not found','error'); return; }
+  var rowNum = await resolveAccountRow(currentAccount.account_id);
+  if (!rowNum) { rowNotFoundToast(); return; }
   var vals = Object.keys(COL).map(function(k){ return currentAccount[k]||''; });
 
   // Collect activity log entries from modal date inputs
@@ -8415,7 +8520,7 @@ async function saveNewAccount() {
 }
 
 function openVisitModal() {
-  document.getElementById('visitDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('visitDate').value = localTodayKey();
   document.getElementById('visitAttendees').value = '';
   document.getElementById('visitNotes').value = '';
   document.getElementById('visitFollowup').value = '';
@@ -8447,7 +8552,7 @@ async function saveVisit() {
     var visitRowNum = parseInt(newRange.match(/\d+/)[0]);
     visitRowMap[vid] = visitRowNum;
 
-    var rowNum = sheetRowMap[a.account_id];
+    var rowNum = await resolveAccountRow(a.account_id);
     if (rowNum) {
       if (date) { await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({spreadsheetId:territorySheetId(currentTerritory),range:'Accounts!'+colLetter(COL.last_visit)+rowNum,valueInputOption:'RAW',resource:{values:[[date]]}}); }); a.last_visit=date; }
       if (fu)   { await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.update({spreadsheetId:territorySheetId(currentTerritory),range:'Accounts!'+colLetter(COL.next_followup)+rowNum,valueInputOption:'RAW',resource:{values:[[fu]]}}); }); a.next_followup=fu; }
