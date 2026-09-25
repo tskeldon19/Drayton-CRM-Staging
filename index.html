@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Drayton CRM v10.1 (STAGING) - built 2026-09-24 — data-safety fix release: row verification, token refresh, local dates -->
+<!-- Drayton CRM v10.2 (STAGING) - built 2026-09-24 — Manager Notes v1 (on top of v10.1 data-safety fixes) -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -456,6 +456,68 @@
     #printArea .print-stop-notes { font-size: 11px; color: #555; margin-top: 2px; }
     #printArea .print-check { width: 50px; text-align: center; font-size: 16px; }
   }
+
+  /* ═══ Manager Notes ═══ */
+  .mn-card { background: var(--black-soft); border: 1px solid var(--gold-dim); border-left: 4px solid var(--gold); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+  .mn-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .mn-card-title { color: var(--gold); font-weight: 700; font-size: 15px; }
+  .mn-count { color: var(--gray-4); font-weight: 400; font-size: 12px; margin-left: 6px; }
+  .mn-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .mn-list { display: flex; flex-direction: column; gap: 8px; }
+  .mn-item { background: var(--black); border: 1px solid var(--gray-1); border-left: 4px solid var(--gray-2); border-radius: 6px; padding: 10px 12px; cursor: pointer; margin-bottom: 8px; }
+  .mn-list .mn-item { margin-bottom: 0; }
+  .mn-item:hover { border-color: var(--gold-dim); }
+  .mn-item.pr-high { border-left-color: #C0392B; }
+  .mn-item.pr-normal { border-left-color: var(--gold); }
+  .mn-item.pr-low { border-left-color: var(--gray-3); }
+  .mn-item.attention { box-shadow: 0 0 0 1px var(--gold) inset; }
+  .mn-item.overdue .mn-item-title { color: #FF8A80; }
+  .mn-item.faded { opacity: 0.5; }
+  .mn-item-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mn-item-title { font-weight: 600; font-size: 14px; flex: 1; min-width: 160px; }
+  .mn-item-meta { font-size: 12px; color: var(--gray-4); margin: 4px 0 8px; line-height: 1.5; }
+  .mn-tag { font-size: 10px; font-weight: 700; letter-spacing: .5px; padding: 2px 6px; border-radius: 4px; }
+  .mn-tag.new { background: var(--gold); color: var(--black); }
+  .mn-status-pill { font-size: 11px; color: var(--gray-4); border: 1px solid var(--gray-2); border-radius: 10px; padding: 1px 8px; }
+  .mn-overdue { color: #FF8A80; font-weight: 600; }
+  .mn-high { color: #FF8A80; }
+  .mn-empty { color: var(--gray-3); font-size: 13px; padding: 10px 0; }
+  .mn-warn { color: var(--gold); font-size: 12px; margin-bottom: 10px; }
+  .mn-hint { color: var(--gray-3); font-size: 12px; margin: 4px 0; }
+  .mn-more { background: none; border: none; color: var(--gold); font-size: 13px; cursor: pointer; padding: 8px 0 0; }
+  .mn-flag { font-size: 12px; margin-left: 4px; }
+  .mn-tabcount { font-size: 11px; color: var(--gray-3); margin-left: 2px; }
+  /* status bar */
+  .mn-statusbar { display: flex; gap: 3px; }
+  .mn-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--gray-1); position: relative; }
+  .mn-seg.done { background: var(--gold-dark); }
+  .mn-seg.current { background: var(--gold); }
+  .mn-statusbar:not(.compact) { margin: 12px 0 26px; }
+  .mn-statusbar:not(.compact) .mn-seg { height: 8px; }
+  .mn-statusbar:not(.compact) .mn-seg span { position: absolute; top: 12px; left: 0; right: 0; text-align: center; font-size: 10px; color: var(--gray-3); white-space: nowrap; }
+  .mn-statusbar:not(.compact) .mn-seg.current span { color: var(--gold); font-weight: 700; }
+  /* detail */
+  .mn-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mn-chip { font-size: 11px; background: var(--gray-1); color: var(--gray-4); border-radius: 10px; padding: 2px 9px; }
+  .mn-stamps { font-size: 11px; color: var(--gray-3); line-height: 1.6; }
+  .mn-body { margin: 12px 0; font-size: 14px; line-height: 1.5; background: var(--black); border-radius: 6px; padding: 10px 12px; }
+  .mn-section-label { font-size: 11px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 6px; }
+  .mn-comment { background: var(--black); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; border-left: 3px solid var(--gray-2); }
+  .mn-comment.mgr { border-left-color: var(--gold); }
+  .mn-comment-meta { font-size: 11px; color: var(--gray-3); margin-bottom: 3px; }
+  .mn-comment-body { font-size: 13px; line-height: 1.5; }
+  .mn-acct-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .mn-acct-chip { background: var(--gray-1); border: 1px solid var(--gray-2); color: var(--white); border-radius: 14px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .mn-acct-chip.picked { cursor: default; }
+  .mn-acct-chip.picked button { background: none; border: none; color: var(--gray-3); cursor: pointer; margin-left: 4px; }
+  .mn-acct-results { display: flex; flex-direction: column; margin-top: 4px; }
+  .mn-acct-result { text-align: left; background: var(--black); border: 1px solid var(--gray-1); color: var(--white); padding: 7px 10px; font-size: 13px; cursor: pointer; }
+  .mn-acct-result span { color: var(--gray-3); }
+  .mn-route-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+  .mn-route-check { font-size: 13px; display: flex; align-items: center; gap: 6px; background: var(--black); border: 1px solid var(--gray-1); border-radius: 6px; padding: 6px 8px; cursor: pointer; }
+  .mn-route-check.all { grid-column: 1 / -1; color: var(--gold); }
+  .mn-account-banner { background: var(--black-soft); border: 1px solid var(--gold-dim); border-left: 4px solid var(--gold); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .mn-account-banner-title { color: var(--gold); font-weight: 700; font-size: 13px; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -680,6 +742,7 @@
       <div class="company-btn-row" style="display:flex;gap:8px;width:100%">
         <button class="btn btn-gold btn-sm" id="postMessageBtn" style="flex:1" title="Manager PIN required">📋 Post Message</button>
         <button class="btn btn-gold btn-sm" id="addImportantDateBtn" style="flex:1" title="Manager PIN required">🗓 Add Important Date</button>
+        <button class="btn btn-gold btn-sm" id="mgrInboxBtn" style="flex:1" title="Requests from reps and notes to reps">📬 Manager Inbox</button>
       </div>
       <input type="file" id="rankingsFileInput" accept=".xls,.xlsx" multiple style="display:none">
       <input type="file" id="machinesFileInput" accept=".xls,.xlsx" style="display:none">
@@ -765,6 +828,7 @@
       <button class="btn btn-secondary btn-sm" id="repLibraryBtn" title="Templates and reference docs">📁 File Library</button>
       <button class="btn btn-secondary btn-sm" id="ptoCalendarBtn" title="See who's out">🗓 PTO Calendar</button>
     </div>
+    <div class="mn-card" id="mgrNotesCard" style="display:none"></div>
     <div class="agenda-btn-row">
       <button type="button" class="agenda-slim-btn" id="agendaOverdueBtn" data-bucket="overdue">
         <span class="agenda-slim-num">—</span> Overdue
@@ -1209,6 +1273,110 @@
   </div>
 </div>
 
+
+<!-- ═══ MANAGER NOTES ═══ -->
+<div class="screen" id="screenMgrNotes">
+  <div class="account-detail">
+    <button class="back-btn" id="mnScreenBackBtn">← Back</button>
+    <div class="detail-header">
+      <div><h2>📌 Manager Notes</h2><div class="meta" id="mnScreenRoute"></div></div>
+      <button class="btn btn-primary btn-sm" id="mnScreenRequestBtn">📨 New Request</button>
+    </div>
+    <div class="tab-row" id="mnListTabs">
+      <button type="button" class="tab active" data-tab="open">Open</button>
+      <button type="button" class="tab" data-tab="history">History</button>
+    </div>
+    <div id="mnScreenList"></div>
+  </div>
+</div>
+
+<div class="screen" id="screenMgrInbox">
+  <div class="account-detail">
+    <button class="back-btn" id="mnInboxBackBtn">← Back to Company Dashboard</button>
+    <div class="detail-header">
+      <div><h2>📬 Manager Inbox</h2><div class="meta" id="mnInboxWho"></div></div>
+      <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-gold btn-sm" id="mnInboxComposeBtn">📝 Post Note to Reps</button>
+        <button class="btn btn-secondary btn-sm" id="mnInboxRefreshBtn">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="tab-row" id="mnInboxTabs"></div>
+    <div id="mnInboxList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalMgrDetail">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3 id="mnDetailTitle">Note</h3>
+      <button class="modal-close" id="mnDetailX">✕</button>
+    </div>
+    <div class="modal-body" id="mnDetailBody"></div>
+    <div class="modal-footer" id="mnDetailFooter" style="flex-wrap:wrap"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalMgrCompose">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3>📝 Post Note to Reps</h3>
+      <button class="modal-close" id="mnComposeX">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row"><label>Routes</label><div class="mn-route-grid" id="mnComposeRoutes"></div></div>
+      <div class="form-grid-2">
+        <div class="form-row"><label>Type</label><select id="mnComposeType"></select></div>
+        <div class="form-row"><label>Priority</label>
+          <select id="mnComposePriority"><option value="high">High</option><option value="normal" selected>Normal</option><option value="low">Low</option></select></div>
+      </div>
+      <div class="form-row"><label>Due date (optional)</label><input type="date" id="mnComposeDue"></div>
+      <div class="form-row"><label>Title</label><input type="text" id="mnComposeTitle" placeholder="e.g. Push PVP at dealer accounts this month"></div>
+      <div class="form-row"><label>Details</label><textarea id="mnComposeBody" style="min-height:90px" placeholder="What you want the rep to focus on or do..."></textarea></div>
+      <div class="form-row"><label>Link accounts (optional)</label>
+        <div class="mn-hint" id="mnComposeAcctHint"></div>
+        <div id="mnComposeAcctWrap" style="display:none">
+          <div class="mn-acct-chips" id="mnComposeAcctChips"></div>
+          <input type="text" id="mnComposeAcctSearch" placeholder="Search accounts on this route...">
+          <div id="mnComposeAcctResults" class="mn-acct-results"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="mnComposeCancel">Cancel</button>
+      <button class="btn btn-gold" id="mnComposeSave">Post</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalMgrRequest">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h3>📨 Request to Management</h3>
+      <button class="modal-close" id="mnReqX">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid-2">
+        <div class="form-row"><label>Send to</label><select id="mnReqTo"></select></div>
+        <div class="form-row"><label>How soon do you need an answer?</label>
+          <select id="mnReqUrgency"><option value="high">🔥 Dealer waiting</option><option value="normal" selected>This week</option><option value="low">Whenever</option></select></div>
+      </div>
+      <div class="form-row"><label>Type</label><select id="mnReqType"></select></div>
+      <div class="form-row"><label>Title</label><input type="text" id="mnReqTitle" placeholder="Short summary"></div>
+      <div class="form-row"><label>Details</label><textarea id="mnReqBody" style="min-height:90px"></textarea></div>
+      <div class="form-row"><label>Account(s) (optional)</label>
+        <div class="mn-acct-chips" id="mnReqAcctChips"></div>
+        <input type="text" id="mnReqAcctSearch" placeholder="Search your accounts...">
+        <div id="mnReqAcctResults" class="mn-acct-results"></div>
+      </div>
+      <div class="mn-hint">Every manager can see requests. Picking a name just tells them who you'd like to answer.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="mnReqCancel">Cancel</button>
+      <button class="btn btn-gold" id="mnReqSave">Send Request</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const CLIENT_ID = '924244663332-thkq7g17smrm1j2jpbhrsutnb4dt6tbk.apps.googleusercontent.com';
@@ -1295,7 +1463,9 @@ const ROUTE_PATTERNS = [
   {pattern:/143/, territory:'Route 143'},
   {pattern:/147/, territory:'Route 147'},
 ];
-const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets';
+// email + profile let the app recognize managers by the Google account they
+// sign in with (matched against the Managers tab on the PTO sheet).
+const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
 const DISCOVERY = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
 const BG_PRODUCTS = [
@@ -1741,6 +1911,7 @@ document.addEventListener('DOMContentLoaded', function() {
         await fetchVMAData();
         cacheCurrentTerritoryData(currentTerritory);
         updateSortOptions(); updateStats(); renderList();
+        await fetchManagerNotesForCurrent(); renderList();
       }
       showToast('Refreshed');
     } catch (e) {
@@ -1891,6 +2062,7 @@ function gisLoaded() {
     callback: function(resp) {
       if (resp.error) { showToast('Sign-in failed','error'); return; }
       markTokenIssued();
+      loadIdentity();
       goToTerritorySelect();
       document.getElementById('authArea').innerHTML =
         '<div class="user-info">'+
@@ -1961,6 +2133,8 @@ function goBack() {
     showScreen('screenCompanyRankings');
   } else if (dest === 'screenCompanyMachines') {
     showScreen('screenCompanyMachines');
+  } else if (dest === 'screenMgrInbox') {
+    showScreen('screenMgrInbox'); renderMgrInbox();
   } else {
     showScreen('screenDashboard'); renderList();
   }
@@ -2145,6 +2319,9 @@ async function loadTerritory() {
   }
   updateSortOptions();
   updateStats(); renderList();
+  var mnCard = document.getElementById('mgrNotesCard');
+  if (mnCard) { mnCard.style.display = 'block'; mnCard.innerHTML = '<div class="mn-empty">Loading manager notes...</div>'; }
+  fetchManagerNotesForCurrent().then(function(){ renderList(); });
 }
 
 // Account Aliases — remembers how raw names from machine/ranking reports map to
@@ -2817,7 +2994,7 @@ function renderList() {
       (selectMode?'<input type="checkbox" class="select-checkbox" data-id="'+a.account_id+'"'+
         (isSelected?' checked':'')+
         (isExisting?' disabled style="opacity:0.4" title="Already in this list"':'')+'>':'')+
-      '<div style="flex:1"><div class="name">'+esc(a.business_name)+' '+typeBadge+
+      '<div style="flex:1"><div class="name">'+esc(a.business_name)+' '+typeBadge+mgrFlagHtml(a.account_id)+
         (isExisting?' <span style="font-size:10px;color:var(--gray-3);font-weight:400">✓ In list</span>':'')+
       '</div>'+
       '<div class="meta">'+[a.town,a.state].filter(Boolean).join(', ')+(a.owner_name?' · '+a.owner_name:a.sm_name?' · '+a.sm_name:'')+' · <span style="color:var(--gray-3)">'+lastVisitStr+'</span></div></div>'+
@@ -3095,10 +3272,12 @@ function renderDetail() {
     '<button class="btn btn-primary btn-sm" id="addToListDetailBtn">📋 Add to List</button>'+
     '<button class="btn btn-primary btn-sm" id="editBtn">✏️ Edit Info</button>'+
     '<button class="btn btn-gold btn-sm" id="logVisitBtn">📋 Log Visit</button>'+
+    '<button class="btn btn-primary btn-sm" id="mnRequestFromAccountBtn">📨 Request</button>'+
     (!isHidden?'<button class="btn btn-danger btn-sm" id="deleteBtn">🗑 Delete</button>':
                '<button class="btn btn-success btn-sm" id="restoreBtn">↩ Restore</button>')+
     '</div></div>';
 
+  html += '<div id="mnAccountBannerHost">'+mgrAccountBannerHtml(a.account_id)+'</div>';
   if (isProspect&&!isHidden) html += '<div class="convert-banner"><span>🔍 Prospective — not yet carrying BG Products.</span><button class="btn btn-success btn-sm" id="convertBtn2">Convert to Active</button></div>';
 
   html += '<div class="cards-grid">'+
@@ -3477,6 +3656,7 @@ function renderDetail() {
     btn.addEventListener('click', function(e){ e.stopPropagation(); openActivityLog(btn.dataset.fkey, btn.dataset.flabel); });
   });
   var lb = document.getElementById('logVisitBtn'); if(lb) lb.addEventListener('click', openVisitModal);
+  wireMgrAccountBanner();
   var db = document.getElementById('deleteBtn'); if(db) db.addEventListener('click', function(){ if (checkManagerPin('delete this account')) softDelete(); });
   var rb = document.getElementById('restoreBtn'); if(rb) rb.addEventListener('click', restoreAccount);
   var rvb = document.getElementById('revertBtn'); if(rvb) rvb.addEventListener('click', revertToProspect);
@@ -8561,6 +8741,896 @@ async function saveVisit() {
     showToast('Visit logged ✓'); closeModal('modalVisit'); renderDetail();
   } catch(e) { showToast(describeApiError(e, 'Error logging visit'),'error'); console.error(e); }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MANAGER NOTES — v1 (staging)
+// ═══════════════════════════════════════════════════════════════════════════
+// Two-way channel between management and reps, shown on each rep's main
+// dashboard page.
+//   direction 'down' = manager → rep (focus, action item, funnel response, FYI)
+//   direction 'up'   = rep → manager request (pricing, ride-along, etc.)
+//
+// Storage (per territory sheet, reps already have edit access there):
+//   'Manager Notes'          A:W — one row per note (MN_FIELDS below)
+//   'Manager Note Comments'  A:G — one row per comment (MNC_FIELDS below)
+// Managers list lives on the PTO sheet ('Managers' tab: name | email |
+// active | out_until) so every rep can read it for the "Addressed to" picker.
+//
+// Identity: managers are recognized by the Google account they sign in with
+// (email matched against the Managers tab). The shared PIN still gates the
+// Company Dashboard itself.
+//
+// Status lifecycle (same column, labels differ by direction):
+//   sent → seen → acknowledged → in_progress → done → closed
+//   down: Acknowledged / Done (rep)          → Closed (manager signs off)
+//   up:   Claimed / Resolved (manager)       → Closed (rep confirms)
+//
+// Every row-targeted write goes through resolveSheetRow() so a shifted row
+// can never be overwritten by mistake.
+// ═══════════════════════════════════════════════════════════════════════════
+
+var MN_TAB  = 'Manager Notes';
+var MNC_TAB = 'Manager Note Comments';
+var MGR_TAB = 'Managers';
+var MN_FIELDS = ['note_id','direction','created_at','created_by_email','created_by_name','route','type',
+  'priority','title','body','linked_account_ids','due_date','addressed_to','status','seen_at','ack_at',
+  'handled_by','done_at','closed_at','group_id','notified_at','updated_at','linked_account_names'];
+var MN_LAST_COL = colLetter(MN_FIELDS.length - 1);   // W
+var MNC_FIELDS = ['comment_id','note_id','created_at','author_email','author_name','role','body'];
+var MNC_LAST_COL = colLetter(MNC_FIELDS.length - 1); // G
+
+var MN_DOWN_TYPES = ['Action Item','Focus','Funnel Response','FYI'];
+var MN_UP_TYPES   = ['Pricing Approval','Ride-Along','How Should I Handle This?','Support / Materials','Escalation','General'];
+var MN_UP_HINTS = {
+  'Pricing Approval': 'Product(s), the price or discount you\'re asking for, competitor pricing, and whether the dealer is waiting on an answer.',
+  'Ride-Along': 'Purpose (menu presentation, stalled deal, relationship) and two or three dates that work.',
+  'How Should I Handle This?': 'What\'s going on, and what you\'re leaning toward doing.',
+  'Support / Materials': 'What you need (displays, menus, samples, tech training) and by when.',
+  'Escalation': 'What happened, who\'s involved at the dealer, and how urgent it is.',
+  'General': 'What you need from management.'
+};
+var MN_PRIORITY_LABELS = {
+  down: { high:'High', normal:'Normal', low:'Low' },
+  up:   { high:'🔥 Dealer waiting', normal:'This week', low:'Whenever' }
+};
+var MN_STAGES = ['sent','seen','acknowledged','in_progress','done','closed'];
+
+// ── State ──────────────────────────────────────────────────────────────────
+var currentUser = { email:'', name:'', isManager:false, managerName:'' };
+var allManagers = [];
+var _identityPromise = null;
+var mnByRoute  = {};   // route -> [note]
+var mncByRoute = {};   // route -> [comment]
+var mnRowMaps  = {};   // route -> { note_id: row }
+var mnMissing  = {};   // route -> true if the tabs aren't set up yet
+var mnAcctCache = {};  // route -> [{id,name,town}] for the compose picker
+var _mnDetail = null;  // { route, noteId }
+var _mnListTab = 'open';
+var _mnInboxTab = 'mine';
+var _mnInboxLoadedAt = 0;
+
+function mnNowIso() { return new Date().toISOString(); }
+function mnVal(v) { return v === undefined || v === null ? '' : String(v); }
+
+// ── Identity ───────────────────────────────────────────────────────────────
+function loadIdentity() {
+  _identityPromise = (async function(){
+    try {
+      var tok = gapi.client.getToken();
+      if (tok && tok.access_token) {
+        var info = await withTimeout(function(){
+          return fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + tok.access_token } })
+            .then(function(r){ return r.ok ? r.json() : Promise.reject({ status: r.status }); });
+        }, 10000);
+        currentUser.email = (info.email || '').toLowerCase();
+        currentUser.name  = info.name || info.email || '';
+      }
+    } catch(e) {
+      // Most likely the email permission wasn't granted — the app still
+      // works, this person just isn't recognized as a manager.
+      console.warn('[identity] Could not read the signed-in Google account', e);
+    }
+    await fetchManagers();
+  })();
+  return _identityPromise;
+}
+
+async function fetchManagers() {
+  try {
+    var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: PTO_SHEET_ID, range: "'"+MGR_TAB+"'!A:D"
+    }); });
+    var rows = res.result.values || [];
+    allManagers = rows.slice(1).map(function(r){
+      return { name: mnVal(r[0]).trim(), email: mnVal(r[1]).trim().toLowerCase(), active: mnVal(r[2]).trim(), out_until: mnVal(r[3]).trim() };
+    }).filter(function(m){ return m.name && m.active.toLowerCase() !== 'no'; });
+  } catch(e) {
+    console.warn('[identity] Managers tab not readable — has it been set up on the PTO sheet?', e);
+    allManagers = [];
+  }
+  var me = currentUser.email ? allManagers.find(function(m){ return m.email === currentUser.email; }) : null;
+  currentUser.isManager = !!me;
+  currentUser.managerName = me ? me.name : '';
+}
+
+async function identityReady() {
+  if (!_identityPromise) loadIdentity();
+  try { await _identityPromise; } catch(e) {}
+}
+
+function myDisplayName() {
+  return currentUser.managerName || currentUser.name || currentUser.email || ((currentTerritory || 'Unknown') + ' rep');
+}
+
+// ── Loading ────────────────────────────────────────────────────────────────
+function mnParseNotes(rows, route) {
+  var map = mnRowMaps[route] || (mnRowMaps[route] = {});
+  Object.keys(map).forEach(function(k){ delete map[k]; });
+  var notes = [];
+  rows.forEach(function(r, i){
+    if (i === 0 || !r || !r[0]) return;
+    var n = {};
+    MN_FIELDS.forEach(function(f, j){ n[f] = mnVal(r[j]); });
+    if (!n.route) n.route = route;
+    if (!n.status) n.status = 'sent';
+    map[n.note_id] = i + 1;
+    notes.push(n);
+  });
+  return notes;
+}
+function mnParseComments(rows) {
+  var out = [];
+  rows.forEach(function(r, i){
+    if (i === 0 || !r || !r[0]) return;
+    var c = {};
+    MNC_FIELDS.forEach(function(f, j){ c[f] = mnVal(r[j]); });
+    out.push(c);
+  });
+  return out;
+}
+
+async function fetchRouteNotes(route) {
+  var sid = territorySheetId(route);
+  try {
+    var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchGet({
+      spreadsheetId: sid, ranges: ["'"+MN_TAB+"'!A:"+MN_LAST_COL, "'"+MNC_TAB+"'!A:"+MNC_LAST_COL]
+    }); });
+    var vr = res.result.valueRanges || [];
+    mnByRoute[route]  = mnParseNotes((vr[0] && vr[0].values) || [], route);
+    mncByRoute[route] = mnParseComments((vr[1] && vr[1].values) || []);
+    mnMissing[route] = false;
+  } catch(e) {
+    console.warn('[Manager Notes] Could not load for '+route+' — are the tabs set up?', e);
+    mnByRoute[route] = mnByRoute[route] || [];
+    mncByRoute[route] = mncByRoute[route] || [];
+    mnMissing[route] = true;
+  }
+}
+
+async function fetchManagerNotesForCurrent() {
+  if (!currentTerritory) return;
+  await identityReady();
+  await fetchRouteNotes(currentTerritory);
+  renderMgrCard();
+  mnStampSeenForRep(currentTerritory);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function mnFind(route, noteId) {
+  return (mnByRoute[route] || []).find(function(n){ return n.note_id === noteId; });
+}
+function mnComments(route, noteId) {
+  return (mncByRoute[route] || []).filter(function(c){ return c.note_id === noteId; })
+    .sort(function(a,b){ return a.created_at.localeCompare(b.created_at); });
+}
+function mnStatusLabel(n) {
+  var s = n.status;
+  if (s === 'acknowledged') return n.direction === 'up' ? 'Claimed' : 'Acknowledged';
+  if (s === 'done') return n.direction === 'up' ? 'Resolved' : 'Done';
+  if (s === 'closed') return (n.direction === 'down' && n.type === 'Focus') ? 'Retired' : 'Closed';
+  return { sent:'Sent', seen:'Seen', in_progress:'In progress' }[s] || s;
+}
+// "Open" = still needs someone to do something.
+//   down: open until the rep marks it done (then it waits on manager sign-off)
+//   up:   open until it's closed (a resolved request still needs the rep to confirm)
+function mnIsOpenForRep(n) {
+  if (n.status === 'closed') return false;
+  if (n.direction === 'down' && n.status === 'done') return false;
+  return true;
+}
+function mnIsOverdue(n) {
+  return !!n.due_date && n.status !== 'done' && n.status !== 'closed' && n.due_date < localTodayKey();
+}
+function mnNeedsRep(n) {
+  // Items waiting on the rep right now — drives the NEW / attention styling.
+  if (n.direction === 'down') return n.status === 'sent' || n.status === 'seen';
+  return n.status === 'done'; // resolved, waiting for the rep to confirm
+}
+function mnSortKey(n) {
+  var pr = { high:0, normal:1, low:2 }[n.priority] !== undefined ? { high:0, normal:1, low:2 }[n.priority] : 1;
+  return [mnIsOverdue(n) ? 0 : 1, mnNeedsRep(n) ? 0 : 1, pr, n.due_date || '9999-99-99', ''];
+}
+function mnCompare(a, b) {
+  var ka = mnSortKey(a), kb = mnSortKey(b);
+  for (var i = 0; i < 4; i++) {
+    if (ka[i] < kb[i]) return -1;
+    if (ka[i] > kb[i]) return 1;
+  }
+  return b.created_at.localeCompare(a.created_at);
+}
+function mnDateShort(iso) {
+  if (!iso) return '';
+  var d = iso.length <= 10 ? new Date(iso + 'T00:00:00') : new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+function mnDateTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ' ' +
+         d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+}
+function mnWhoLine(n) {
+  if (n.direction === 'down') return 'From ' + esc(n.created_by_name || 'Management');
+  var to = n.addressed_to && n.addressed_to !== 'General' ? 'To ' + esc(n.addressed_to) : 'To any manager';
+  return esc(n.created_by_name || 'Rep') + ' → ' + to.replace(/^To /, '') +
+    (n.handled_by ? ' · handled by ' + esc(n.handled_by) : '');
+}
+function mnOpenNotesForAccount(route, accountId) {
+  return (mnByRoute[route] || []).filter(function(n){
+    return mnIsOpenForRep(n) && n.linked_account_ids &&
+      n.linked_account_ids.split(',').map(function(s){ return s.trim(); }).indexOf(accountId) !== -1;
+  });
+}
+
+// Small status bar: six segments, filled up to the current stage.
+function mnStatusBarHtml(n, compact) {
+  var idx = MN_STAGES.indexOf(n.status);
+  var labels = n.direction === 'up'
+    ? ['Sent','Seen','Claimed','In progress','Resolved','Closed']
+    : ['Sent','Seen','Acknowledged','In progress','Done', n.type === 'Focus' ? 'Retired' : 'Closed'];
+  var segs = MN_STAGES.map(function(s, i){
+    var cls = i < idx ? 'done' : (i === idx ? 'current' : '');
+    return '<div class="mn-seg ' + cls + '">' + (compact ? '' : '<span>' + labels[i] + '</span>') + '</div>';
+  }).join('');
+  return '<div class="mn-statusbar' + (compact ? ' compact' : '') + '">' + segs + '</div>';
+}
+
+function mnItemHtml(n, opts) {
+  opts = opts || {};
+  var faded = !mnIsOpenForRep(n) && !opts.managerView;
+  if (opts.managerView) faded = n.status === 'closed';
+  var overdue = mnIsOverdue(n);
+  var attention = opts.managerView
+    ? (n.direction === 'up' ? (!n.handled_by && n.status !== 'closed') : n.status === 'done')
+    : mnNeedsRep(n);
+  var tag = '';
+  if (attention) {
+    if (opts.managerView) tag = n.direction === 'up' ? '<span class="mn-tag new">UNCLAIMED</span>' : '<span class="mn-tag new">NEEDS SIGN-OFF</span>';
+    else tag = n.direction === 'down' ? '<span class="mn-tag new">NEW</span>' : '<span class="mn-tag new">RESOLVED — CONFIRM</span>';
+  }
+  var dirIcon = n.direction === 'up' ? '📨' : '📌';
+  var pr = MN_PRIORITY_LABELS[n.direction === 'up' ? 'up' : 'down'][n.priority] || '';
+  var comments = mnComments(n.route, n.note_id).length;
+  var meta = [
+    esc(n.type),
+    opts.showRoute ? esc(n.route) : '',
+    mnWhoLine(n),
+    n.due_date ? '<span class="' + (overdue ? 'mn-overdue' : '') + '">' + (overdue ? 'Overdue · ' : 'Due ') + mnDateShort(n.due_date) + '</span>' : '',
+    (n.priority === 'high' ? '<span class="mn-high">' + esc(pr) + '</span>' : ''),
+    comments ? ('💬 ' + comments) : ''
+  ].filter(Boolean).join(' · ');
+  return '<div class="mn-item pr-' + esc(n.priority || 'normal') + (attention ? ' attention' : '') + (faded ? ' faded' : '') + (overdue ? ' overdue' : '') +
+    '" data-route="' + esc(n.route) + '" data-note="' + esc(n.note_id) + '">' +
+      '<div class="mn-item-top"><span class="mn-item-title">' + dirIcon + ' ' + esc(n.title) + '</span>' + tag +
+        '<span class="mn-status-pill">' + esc(mnStatusLabel(n)) + '</span></div>' +
+      '<div class="mn-item-meta">' + meta + '</div>' +
+      mnStatusBarHtml(n, true) +
+    '</div>';
+}
+
+function mnWireItems(container) {
+  container.querySelectorAll('.mn-item').forEach(function(el){
+    el.addEventListener('click', function(){ openMgrDetail(el.dataset.route, el.dataset.note); });
+  });
+}
+
+// ── Rep dashboard card ─────────────────────────────────────────────────────
+function renderMgrCard() {
+  var el = document.getElementById('mgrNotesCard');
+  if (!el || !currentTerritory) return;
+  var route = currentTerritory;
+  var notes = (mnByRoute[route] || []).slice();
+  var open = notes.filter(mnIsOpenForRep).sort(mnCompare);
+  var top = open.slice(0, 3);
+  var more = open.length - top.length;
+  var needs = open.filter(mnNeedsRep).length;
+
+  var head = '<div class="mn-card-head">' +
+    '<div class="mn-card-title">📌 Manager Notes' +
+      (open.length ? ' <span class="mn-count">' + open.length + ' open' + (needs ? ' · ' + needs + ' need you' : '') + '</span>' : '') +
+    '</div>' +
+    '<div class="mn-card-actions">' +
+      (currentUser.isManager ? '<button class="btn btn-gold btn-sm" id="mnPostToRepBtn">📝 Post to this route</button>' : '') +
+      '<button class="btn btn-primary btn-sm" id="mnNewRequestBtn">📨 New Request</button>' +
+      '<button class="btn btn-secondary btn-sm" id="mnViewAllBtn">View all / history</button>' +
+    '</div></div>';
+
+  var body;
+  if (mnMissing[route]) {
+    body = '<div class="mn-empty">Manager Notes isn\'t set up on this route\'s sheet yet.</div>';
+  } else if (!top.length) {
+    body = '<div class="mn-empty">Nothing open from management right now.</div>';
+  } else {
+    body = '<div class="mn-list">' + top.map(function(n){ return mnItemHtml(n); }).join('') + '</div>' +
+      (more > 0 ? '<button type="button" class="mn-more" id="mnMoreBtn">+' + more + ' more</button>' : '');
+  }
+  el.innerHTML = head + body;
+  el.style.display = 'block';
+  mnWireItems(el);
+  var b;
+  if ((b = document.getElementById('mnNewRequestBtn'))) b.addEventListener('click', function(){ openMgrRequestModal(null); });
+  if ((b = document.getElementById('mnViewAllBtn'))) b.addEventListener('click', function(){ openMgrNotesScreen('open'); });
+  if ((b = document.getElementById('mnMoreBtn'))) b.addEventListener('click', function(){ openMgrNotesScreen('open'); });
+  if ((b = document.getElementById('mnPostToRepBtn'))) b.addEventListener('click', function(){ openMgrComposeModal([route]); });
+}
+
+// Reps only: first time a manager note is shown, stamp it Seen so the
+// manager knows it landed. Managers viewing a route never stamp it.
+async function mnStampSeenForRep(route) {
+  if (currentUser.isManager) return;
+  var unseen = (mnByRoute[route] || []).filter(function(n){ return n.direction === 'down' && n.status === 'sent'; });
+  for (var i = 0; i < unseen.length; i++) {
+    try { await mnUpdate(route, unseen[i], { status:'seen', seen_at: mnNowIso() }, true); }
+    catch(e) { console.warn('[Manager Notes] seen stamp failed', e); }
+  }
+  if (unseen.length) renderMgrCard();
+}
+
+// Account list flag + account detail banner
+function mgrFlagHtml(accountId) {
+  if (!currentTerritory) return '';
+  var list = mnOpenNotesForAccount(currentTerritory, accountId);
+  if (!list.length) return '';
+  return ' <span class="mn-flag" title="' + list.length + ' open manager note' + (list.length > 1 ? 's' : '') + '">📌' + (list.length > 1 ? list.length : '') + '</span>';
+}
+function mgrAccountBannerHtml(accountId) {
+  if (!currentTerritory) return '';
+  var list = mnOpenNotesForAccount(currentTerritory, accountId).sort(mnCompare);
+  if (!list.length) return '';
+  return '<div class="mn-account-banner"><div class="mn-account-banner-title">📌 Manager notes on this account</div>' +
+    list.map(function(n){ return mnItemHtml(n); }).join('') + '</div>';
+}
+function wireMgrAccountBanner() {
+  var el = document.querySelector('.mn-account-banner');
+  if (el) mnWireItems(el);
+  var rb = document.getElementById('mnRequestFromAccountBtn');
+  if (rb) rb.addEventListener('click', function(){ openMgrRequestModal(currentAccount); });
+}
+
+// ── Rep full list screen ───────────────────────────────────────────────────
+function openMgrNotesScreen(tab) {
+  _mnListTab = tab || 'open';
+  var active = document.querySelector('.screen.active');
+  previousScreen = active ? active.id : 'screenDashboard';
+  showScreen('screenMgrNotes');
+  renderMgrNotesScreen();
+}
+function renderMgrNotesScreen() {
+  var route = currentTerritory;
+  document.getElementById('mnScreenRoute').textContent = route || '';
+  document.querySelectorAll('#mnListTabs .tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab === _mnListTab); });
+  var notes = (mnByRoute[route] || []).slice();
+  var list = _mnListTab === 'open'
+    ? notes.filter(mnIsOpenForRep).sort(mnCompare)
+    : notes.filter(function(n){ return !mnIsOpenForRep(n); })
+        .sort(function(a,b){ return (b.closed_at || b.done_at || b.updated_at).localeCompare(a.closed_at || a.done_at || a.updated_at); });
+  var el = document.getElementById('mnScreenList');
+  if (mnMissing[route]) { el.innerHTML = '<div class="mn-empty">Manager Notes isn\'t set up on this route\'s sheet yet.</div>'; return; }
+  el.innerHTML = list.length ? list.map(function(n){ return mnItemHtml(n); }).join('')
+    : '<div class="mn-empty">' + (_mnListTab === 'open' ? 'Nothing open.' : 'No completed items yet.') + '</div>';
+  mnWireItems(el);
+}
+
+// ── Manager inbox (all routes) ─────────────────────────────────────────────
+async function openMgrInbox() {
+  await identityReady();
+  if (!currentUser.isManager) {
+    showToast(currentUser.email
+      ? currentUser.email + ' isn\'t on the Managers list — ask to be added to the Managers tab'
+      : 'Couldn\'t read your Google account — sign out and back in, and allow email access', 'error');
+    return;
+  }
+  previousScreen = 'screenCompanyView';
+  showScreen('screenMgrInbox');
+  document.getElementById('mnInboxWho').textContent = 'Signed in as ' + currentUser.managerName;
+  await loadMgrInbox(false);
+}
+async function loadMgrInbox(force) {
+  var el = document.getElementById('mnInboxList');
+  if (force || (Date.now() - _mnInboxLoadedAt) > 60000) {
+    el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading all routes...</div>';
+    await ensureFreshToken();
+    await Promise.all(Object.keys(TERRITORY_SHEET_IDS).map(function(r){ return fetchRouteNotes(r); }));
+    _mnInboxLoadedAt = Date.now();
+  }
+  renderMgrInbox();
+}
+function mnInboxBuckets() {
+  var all = [];
+  Object.keys(mnByRoute).forEach(function(r){ all = all.concat(mnByRoute[r] || []); });
+  var me = currentUser.managerName;
+  var upOpen = all.filter(function(n){ return n.direction === 'up' && n.status !== 'closed'; });
+  return {
+    mine: upOpen.filter(function(n){ return n.addressed_to === me || n.handled_by === me; }),
+    unclaimed: upOpen.filter(function(n){ return !n.handled_by; }),
+    requests: upOpen,
+    notes: all.filter(function(n){ return n.direction === 'down' && n.status !== 'closed'; }),
+    closed: all.filter(function(n){ return n.status === 'closed'; })
+  };
+}
+function mnInboxSort(a, b) {
+  var ua = { high:0, normal:1, low:2 }[a.priority]; ua = ua === undefined ? 1 : ua;
+  var ub = { high:0, normal:1, low:2 }[b.priority]; ub = ub === undefined ? 1 : ub;
+  var na = (a.direction === 'up' ? !a.handled_by : a.status === 'done') ? 0 : 1;
+  var nb = (b.direction === 'up' ? !b.handled_by : b.status === 'done') ? 0 : 1;
+  if (na !== nb) return na - nb;
+  var oa = mnIsOverdue(a) ? 0 : 1, ob = mnIsOverdue(b) ? 0 : 1;
+  if (oa !== ob) return oa - ob;
+  if (ua !== ub) return ua - ub;
+  return a.created_at.localeCompare(b.created_at); // oldest waiting first
+}
+function renderMgrInbox() {
+  var b = mnInboxBuckets();
+  var labels = { mine:'Mine', unclaimed:'Unclaimed', requests:'All requests', notes:'Notes to reps', closed:'Closed' };
+  document.getElementById('mnInboxTabs').innerHTML = Object.keys(labels).map(function(k){
+    return '<button type="button" class="tab' + (_mnInboxTab === k ? ' active' : '') + '" data-tab="' + k + '">' +
+      labels[k] + (k !== 'closed' ? ' <span class="mn-tabcount">' + b[k].length + '</span>' : '') + '</button>';
+  }).join('');
+  document.querySelectorAll('#mnInboxTabs .tab').forEach(function(t){
+    t.addEventListener('click', function(){ _mnInboxTab = t.dataset.tab; renderMgrInbox(); });
+  });
+  var list = b[_mnInboxTab].slice();
+  if (_mnInboxTab === 'closed') {
+    list.sort(function(x,y){ return (y.closed_at || '').localeCompare(x.closed_at || ''); });
+    list = list.slice(0, 60);
+  } else {
+    list.sort(mnInboxSort);
+  }
+  var missing = Object.keys(mnMissing).filter(function(r){ return mnMissing[r]; });
+  var el = document.getElementById('mnInboxList');
+  el.innerHTML =
+    (missing.length ? '<div class="mn-warn">Not set up yet on: ' + esc(missing.join(', ')) + '</div>' : '') +
+    (list.length ? list.map(function(n){ return mnItemHtml(n, { managerView:true, showRoute:true }); }).join('')
+                 : '<div class="mn-empty">Nothing here.</div>');
+  mnWireItems(el);
+}
+
+// ── Writes ─────────────────────────────────────────────────────────────────
+// Writes only the changed cells of one note row, after verifying the row.
+async function mnUpdate(route, note, changes, quiet) {
+  var sid = territorySheetId(route);
+  changes.updated_at = mnNowIso();
+  var row = await resolveSheetRow(sid, MN_TAB, note.note_id, mnRowMaps[route] || (mnRowMaps[route] = {}));
+  if (!row) { if (!quiet) rowNotFoundToast(); return false; }
+  var data = Object.keys(changes).map(function(k){
+    return { range: "'"+MN_TAB+"'!" + colLetter(MN_FIELDS.indexOf(k)) + row, values: [[changes[k]]] };
+  });
+  await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: sid, resource: { valueInputOption:'RAW', data: data }
+  }); });
+  Object.keys(changes).forEach(function(k){ note[k] = changes[k]; });
+  return true;
+}
+
+async function mnAppendNote(route, note) {
+  var row = MN_FIELDS.map(function(f){ return mnVal(note[f]); });
+  var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: territorySheetId(route), range: "'"+MN_TAB+"'!A:"+MN_LAST_COL,
+    valueInputOption:'RAW', insertDataOption:'INSERT_ROWS', resource: { values: [row] }
+  }); });
+  var rng = res && res.result && res.result.updates && res.result.updates.updatedRange;
+  var m = rng && rng.match(/![A-Z]+(\d+)/);
+  if (m) (mnRowMaps[route] || (mnRowMaps[route] = {}))[note.note_id] = parseInt(m[1], 10);
+  (mnByRoute[route] || (mnByRoute[route] = [])).push(note);
+}
+
+async function mnAppendComment(route, noteId, body) {
+  var c = {
+    comment_id: 'MNC' + Date.now() + Math.floor(Math.random() * 1000),
+    note_id: noteId, created_at: mnNowIso(),
+    author_email: currentUser.email, author_name: myDisplayName(),
+    role: currentUser.isManager ? 'manager' : 'rep', body: body
+  };
+  await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: territorySheetId(route), range: "'"+MNC_TAB+"'!A:"+MNC_LAST_COL,
+    valueInputOption:'RAW', insertDataOption:'INSERT_ROWS',
+    resource: { values: [MNC_FIELDS.map(function(f){ return c[f]; })] }
+  }); });
+  (mncByRoute[route] || (mncByRoute[route] = [])).push(c);
+}
+
+// Re-reads handled_by straight from the sheet right before a claim, so two
+// managers tapping Claim at the same moment can't both "own" it.
+async function mnFreshHandledBy(route, note) {
+  var sid = territorySheetId(route);
+  var row = await resolveSheetRow(sid, MN_TAB, note.note_id, mnRowMaps[route] || (mnRowMaps[route] = {}));
+  if (!row) return null;
+  var col = colLetter(MN_FIELDS.indexOf('handled_by'));
+  var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: sid, range: "'"+MN_TAB+"'!"+col+row
+  }); });
+  return mnVal(res.result.values && res.result.values[0] && res.result.values[0][0]);
+}
+
+// ── Detail modal ───────────────────────────────────────────────────────────
+async function openMgrDetail(route, noteId) {
+  _mnDetail = { route: route, noteId: noteId };
+  renderMgrDetail();
+  document.getElementById('modalMgrDetail').classList.add('open');
+  var n = mnFind(route, noteId);
+  if (!n) return;
+  // Stamp Seen: a rep opening a manager note, or a manager opening a request.
+  try {
+    if (n.status === 'sent' && ((n.direction === 'down' && !currentUser.isManager) || (n.direction === 'up' && currentUser.isManager))) {
+      if (await mnUpdate(route, n, { status:'seen', seen_at: mnNowIso() }, true)) { renderMgrDetail(); mnRerenderAll(); }
+    }
+  } catch(e) { console.warn('[Manager Notes] seen stamp failed', e); }
+}
+
+function renderMgrDetail() {
+  if (!_mnDetail) return;
+  var route = _mnDetail.route, n = mnFind(route, _mnDetail.noteId);
+  var body = document.getElementById('mnDetailBody');
+  var foot = document.getElementById('mnDetailFooter');
+  if (!n) { body.innerHTML = '<div class="mn-empty">This note is no longer available.</div>'; foot.innerHTML = ''; return; }
+  document.getElementById('mnDetailTitle').textContent = (n.direction === 'up' ? '📨 ' : '📌 ') + n.title;
+
+  var pr = MN_PRIORITY_LABELS[n.direction === 'up' ? 'up' : 'down'][n.priority] || '';
+  var chips = [esc(n.type), esc(route), pr ? esc(pr) : '',
+    n.due_date ? (mnIsOverdue(n) ? '<span class="mn-overdue">Overdue · ' + mnDateShort(n.due_date) + '</span>' : 'Due ' + mnDateShort(n.due_date)) : '']
+    .filter(Boolean).map(function(c){ return '<span class="mn-chip">' + c + '</span>'; }).join('');
+
+  var ids = n.linked_account_ids ? n.linked_account_ids.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  var names = n.linked_account_names ? n.linked_account_names.split(' | ') : [];
+  var acctHtml = ids.length ? '<div class="mn-section-label">Linked accounts</div><div class="mn-acct-chips">' +
+    ids.map(function(id, i){
+      return '<button type="button" class="mn-acct-chip" data-acct="' + esc(id) + '">🏢 ' + esc(names[i] || id) + '</button>';
+    }).join('') + '</div>' : '';
+
+  var comments = mnComments(route, n.note_id);
+  var thread = '<div class="mn-section-label">Comments</div>' + (comments.length ? comments.map(function(c){
+    return '<div class="mn-comment ' + (c.role === 'manager' ? 'mgr' : 'rep') + '">' +
+      '<div class="mn-comment-meta">' + esc(c.author_name) + (c.role === 'manager' ? ' · Manager' : '') + ' · ' + mnDateTime(c.created_at) + '</div>' +
+      '<div class="mn-comment-body">' + esc(c.body).replace(/\n/g, '<br>') + '</div></div>';
+  }).join('') : '<div class="mn-empty" style="padding:8px 0">No comments yet.</div>');
+
+  var stampLine = [
+    'Posted ' + mnDateTime(n.created_at) + ' by ' + esc(n.created_by_name || '—'),
+    n.direction === 'up' ? ('To ' + esc(n.addressed_to || 'General')) : '',
+    n.seen_at ? 'Seen ' + mnDateTime(n.seen_at) : '',
+    n.ack_at ? (n.direction === 'up' ? 'Claimed ' : 'Acknowledged ') + mnDateTime(n.ack_at) + (n.handled_by ? ' (' + esc(n.handled_by) + ')' : '') : '',
+    n.done_at ? (n.direction === 'up' ? 'Resolved ' : 'Done ') + mnDateTime(n.done_at) : '',
+    n.closed_at ? 'Closed ' + mnDateTime(n.closed_at) : ''
+  ].filter(Boolean).join(' · ');
+
+  body.innerHTML =
+    '<div class="mn-chips">' + chips + '</div>' +
+    mnStatusBarHtml(n, false) +
+    '<div class="mn-stamps">' + stampLine + '</div>' +
+    (n.body ? '<div class="mn-body">' + esc(n.body).replace(/\n/g, '<br>') + '</div>' : '') +
+    acctHtml + thread +
+    (n.status !== 'closed' ? '<div class="form-row" style="margin-top:12px"><textarea id="mnCommentInput" placeholder="Add a comment — e.g. meeting set for 10/2, standing by until then" style="min-height:70px"></textarea></div>' : '');
+
+  body.querySelectorAll('.mn-acct-chip').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      closeModal('modalMgrDetail');
+      var id = btn.dataset.acct;
+      if (route === currentTerritory && allAccounts.find(function(a){ return a.account_id === id; })) openAccount(id);
+      else openAccountFromManagerView(id, route, document.querySelector('.screen.active') ? document.querySelector('.screen.active').id : 'screenCompanyView');
+    });
+  });
+
+  // Actions depend on who's looking and which direction the note flows.
+  var acts = [];
+  var mgr = currentUser.isManager, me = currentUser.managerName;
+  if (n.status !== 'closed') acts.push(['comment', 'Post comment', 'btn-primary']);
+  if (n.direction === 'down') {
+    if (!mgr) {
+      if (n.status === 'sent' || n.status === 'seen') acts.push(['ack', '👍 Got it', 'btn-gold']);
+      if (n.status !== 'done' && n.status !== 'closed' && n.type !== 'Focus') acts.push(['done', '✅ Mark done (with comment)', 'btn-success']);
+    } else {
+      if (n.status === 'done') acts.push(['close', '✅ Sign off & close', 'btn-success']);
+      else if (n.status !== 'closed') acts.push(['close', n.type === 'Focus' ? 'Retire focus' : 'Close', 'btn-secondary']);
+      if (n.status === 'done' || n.status === 'closed') acts.push(['reopen', '↩ Reopen', 'btn-secondary']);
+    }
+  } else {
+    if (mgr) {
+      if (!n.handled_by && n.status !== 'closed') acts.push(['claim', '✋ Claim', 'btn-gold']);
+      else if (n.handled_by && n.handled_by !== me && n.status !== 'closed') acts.push(['claim', '✋ Take over from ' + n.handled_by, 'btn-secondary']);
+      if (n.status !== 'done' && n.status !== 'closed') acts.push(['resolve', '✅ Resolve (with answer)', 'btn-success']);
+      if (n.status !== 'closed') acts.push(['close', 'Close', 'btn-secondary']);
+    } else {
+      if (n.status === 'done') { acts.push(['close', '✅ Confirm & close', 'btn-success']); acts.push(['reopen', '↩ Not settled — reopen', 'btn-secondary']); }
+      else if (n.status !== 'closed') acts.push(['close', 'Withdraw', 'btn-secondary']);
+    }
+  }
+  foot.innerHTML = '<button class="btn btn-secondary" id="mnDetailCloseBtn">Close window</button>' +
+    acts.map(function(a){ return '<button class="btn ' + a[2] + '" data-act="' + a[0] + '">' + esc(a[1]) + '</button>'; }).join('');
+  document.getElementById('mnDetailCloseBtn').addEventListener('click', function(){ closeModal('modalMgrDetail'); });
+  foot.querySelectorAll('[data-act]').forEach(function(b){
+    b.addEventListener('click', function(){ guardedSave(function(){ return mnDoAction(b.dataset.act); }); });
+  });
+}
+
+async function mnDoAction(act) {
+  if (!_mnDetail) return;
+  var route = _mnDetail.route, n = mnFind(route, _mnDetail.noteId);
+  if (!n) return;
+  var input = document.getElementById('mnCommentInput');
+  var text = input ? input.value.trim() : '';
+  var now = mnNowIso();
+  var mgr = currentUser.isManager, me = currentUser.managerName;
+  try {
+    if (act === 'comment') {
+      if (!text) { showToast('Type a comment first', 'error'); return; }
+      await mnAppendComment(route, n.note_id, text);
+      var ch = {};
+      if (n.direction === 'down' && !mgr && ['sent','seen','acknowledged'].indexOf(n.status) !== -1) {
+        ch.status = 'in_progress'; if (!n.seen_at) ch.seen_at = now; if (!n.ack_at) ch.ack_at = now;
+      }
+      if (n.direction === 'up' && mgr) {
+        if (!n.handled_by) { ch.handled_by = me; ch.ack_at = n.ack_at || now; }
+        if (['sent','seen','acknowledged'].indexOf(n.status) !== -1) { ch.status = 'in_progress'; if (!n.seen_at) ch.seen_at = now; }
+      }
+      if (Object.keys(ch).length) await mnUpdate(route, n, ch);
+      showToast('Comment posted ✓');
+    } else if (act === 'ack') {
+      await mnUpdate(route, n, { status:'acknowledged', ack_at: now, seen_at: n.seen_at || now });
+      showToast('Acknowledged ✓');
+    } else if (act === 'done') {
+      if (!text) { showToast('Add a short comment on what was done before marking it done', 'error'); return; }
+      await mnAppendComment(route, n.note_id, text);
+      await mnUpdate(route, n, { status:'done', done_at: now, ack_at: n.ack_at || now, seen_at: n.seen_at || now });
+      showToast('Marked done ✓');
+    } else if (act === 'claim') {
+      var fresh = await mnFreshHandledBy(route, n);
+      if (fresh === null) { rowNotFoundToast(); return; }
+      if (fresh && fresh !== me && fresh !== n.handled_by) {
+        n.handled_by = fresh; renderMgrDetail(); mnRerenderAll();
+        showToast(fresh + ' just claimed this — tap again if you still want to take it over', 'error');
+        return;
+      }
+      if (text) await mnAppendComment(route, n.note_id, text);
+      var cc = { handled_by: me, ack_at: n.ack_at || now, seen_at: n.seen_at || now };
+      if (n.status === 'sent' || n.status === 'seen') cc.status = 'acknowledged';
+      await mnUpdate(route, n, cc);
+      showToast('Claimed ✓');
+    } else if (act === 'resolve') {
+      if (!text) { showToast('Type the answer in the comment box before resolving', 'error'); return; }
+      await mnAppendComment(route, n.note_id, text);
+      await mnUpdate(route, n, { status:'done', done_at: now, handled_by: n.handled_by || me, ack_at: n.ack_at || now, seen_at: n.seen_at || now });
+      showToast('Resolved ✓ — the rep will confirm');
+    } else if (act === 'close') {
+      if (text) await mnAppendComment(route, n.note_id, text);
+      await mnUpdate(route, n, { status:'closed', closed_at: now });
+      showToast('Closed ✓');
+    } else if (act === 'reopen') {
+      if (text) await mnAppendComment(route, n.note_id, text);
+      await mnUpdate(route, n, { status:'in_progress', done_at:'', closed_at:'' });
+      showToast('Reopened');
+    }
+    renderMgrDetail();
+    mnRerenderAll();
+  } catch(e) {
+    console.error(e);
+    showToast(describeApiError(e, 'Error saving — are the Manager Notes tabs set up on this route?'), 'error');
+  }
+}
+
+function mnRerenderAll() {
+  renderMgrCard();
+  if (document.getElementById('screenMgrNotes').classList.contains('active')) renderMgrNotesScreen();
+  if (document.getElementById('screenMgrInbox').classList.contains('active')) renderMgrInbox();
+  if (document.getElementById('screenDetail').classList.contains('active') && currentAccount) {
+    var host = document.getElementById('mnAccountBannerHost');
+    if (host) { host.innerHTML = mgrAccountBannerHtml(currentAccount.account_id); wireMgrAccountBanner(); }
+  }
+  if (document.getElementById('screenDashboard').classList.contains('active')) renderList();
+}
+
+// ── Account picker (shared by compose + request) ───────────────────────────
+var _mnPicked = [];      // [{id,name}]
+var _mnPickerSource = []; // [{id,name,town}]
+function mnAccountsFromLoaded() {
+  return allAccounts.filter(function(a){ return a.status !== 'deleted'; })
+    .map(function(a){ return { id: a.account_id, name: a.business_name, town: a.town }; });
+}
+async function mnAccountsForRoute(route) {
+  if (route === currentTerritory && allAccounts.length) return mnAccountsFromLoaded();
+  if (mnAcctCache[route]) return mnAcctCache[route];
+  var res = await withRetry(function(){ return gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: territorySheetId(route), range: 'Accounts!A:' + colLetter(COL.town)
+  }); });
+  var rows = res.result.values || [];
+  mnAcctCache[route] = rows.slice(1).filter(function(r){ return r[COL.account_id] && r[COL.status] !== 'deleted'; })
+    .map(function(r){ return { id: r[COL.account_id], name: r[COL.business_name] || '', town: r[COL.town] || '' }; });
+  return mnAcctCache[route];
+}
+function mnRenderPicker(prefix) {
+  var chips = document.getElementById(prefix + 'AcctChips');
+  chips.innerHTML = _mnPicked.map(function(p, i){
+    return '<span class="mn-acct-chip picked">' + esc(p.name) + ' <button type="button" data-i="' + i + '">✕</button></span>';
+  }).join('');
+  chips.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){ _mnPicked.splice(parseInt(b.dataset.i, 10), 1); mnRenderPicker(prefix); });
+  });
+  var q = (document.getElementById(prefix + 'AcctSearch').value || '').trim().toLowerCase();
+  var res = document.getElementById(prefix + 'AcctResults');
+  if (!q) { res.innerHTML = ''; return; }
+  var pickedIds = _mnPicked.map(function(p){ return p.id; });
+  var matches = _mnPickerSource.filter(function(a){
+    return pickedIds.indexOf(a.id) === -1 && ((a.name || '').toLowerCase().indexOf(q) !== -1 || (a.town || '').toLowerCase().indexOf(q) !== -1);
+  }).slice(0, 8);
+  res.innerHTML = matches.length ? matches.map(function(a){
+    return '<button type="button" class="mn-acct-result" data-id="' + esc(a.id) + '">' + esc(a.name) + (a.town ? ' <span>· ' + esc(a.town) + '</span>' : '') + '</button>';
+  }).join('') : '<div class="mn-empty" style="padding:6px 0">No matches.</div>';
+  res.querySelectorAll('.mn-acct-result').forEach(function(b){
+    b.addEventListener('click', function(){
+      var a = _mnPickerSource.find(function(x){ return x.id === b.dataset.id; });
+      if (a) _mnPicked.push({ id: a.id, name: a.name });
+      document.getElementById(prefix + 'AcctSearch').value = '';
+      mnRenderPicker(prefix);
+    });
+  });
+}
+
+// ── Manager compose ────────────────────────────────────────────────────────
+async function openMgrComposeModal(preselectRoutes) {
+  await identityReady();
+  if (!currentUser.isManager) { showToast('Only managers on the Managers list can post notes', 'error'); return; }
+  document.getElementById('mnComposeRoutes').innerHTML =
+    '<label class="mn-route-check all"><input type="checkbox" id="mnRouteAll"> All routes</label>' +
+    Object.keys(TERRITORY_SHEET_IDS).map(function(r){
+      return '<label class="mn-route-check"><input type="checkbox" class="mn-route-cb" value="' + esc(r) + '"' +
+        ((preselectRoutes || []).indexOf(r) !== -1 ? ' checked' : '') + '> ' + esc(r) + '</label>';
+    }).join('');
+  document.getElementById('mnComposeType').innerHTML = MN_DOWN_TYPES.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join('');
+  document.getElementById('mnComposePriority').value = 'normal';
+  ['mnComposeDue','mnComposeTitle','mnComposeBody','mnComposeAcctSearch'].forEach(function(id){ document.getElementById(id).value = ''; });
+  _mnPicked = []; _mnPickerSource = [];
+  document.getElementById('mnRouteAll').addEventListener('change', function(){
+    var on = this.checked;
+    document.querySelectorAll('.mn-route-cb').forEach(function(cb){ cb.checked = on; });
+    mnComposeRoutesChanged();
+  });
+  document.querySelectorAll('.mn-route-cb').forEach(function(cb){ cb.addEventListener('change', mnComposeRoutesChanged); });
+  mnComposeRoutesChanged();
+  document.getElementById('modalMgrCompose').classList.add('open');
+}
+async function mnComposeRoutesChanged() {
+  var routes = Array.prototype.slice.call(document.querySelectorAll('.mn-route-cb:checked')).map(function(cb){ return cb.value; });
+  var wrap = document.getElementById('mnComposeAcctWrap');
+  var hint = document.getElementById('mnComposeAcctHint');
+  if (routes.length !== 1) {
+    wrap.style.display = 'none';
+    hint.textContent = routes.length > 1 ? 'Linking accounts works when posting to a single route.' : '';
+    _mnPicked = []; return;
+  }
+  hint.textContent = '';
+  wrap.style.display = 'block';
+  try {
+    _mnPickerSource = await mnAccountsForRoute(routes[0]);
+  } catch(e) { _mnPickerSource = []; showToast(describeApiError(e, 'Could not load that route\'s accounts'), 'error'); }
+  _mnPicked = _mnPicked.filter(function(p){ return _mnPickerSource.some(function(a){ return a.id === p.id; }); });
+  mnRenderPicker('mnCompose');
+}
+async function saveMgrCompose() {
+  var routes = Array.prototype.slice.call(document.querySelectorAll('.mn-route-cb:checked')).map(function(cb){ return cb.value; });
+  var type = document.getElementById('mnComposeType').value;
+  var priority = document.getElementById('mnComposePriority').value;
+  var due = document.getElementById('mnComposeDue').value;
+  var title = document.getElementById('mnComposeTitle').value.trim();
+  var body = document.getElementById('mnComposeBody').value.trim();
+  if (!routes.length) { showToast('Pick at least one route', 'error'); return; }
+  if (!title) { showToast('Add a title', 'error'); return; }
+  var group = routes.length > 1 ? 'GRP' + Date.now() : '';
+  var linked = routes.length === 1 ? _mnPicked : [];
+  var failed = [];
+  for (var i = 0; i < routes.length; i++) {
+    var note = {
+      note_id: 'MN' + Date.now() + i, direction: 'down', created_at: mnNowIso(),
+      created_by_email: currentUser.email, created_by_name: currentUser.managerName,
+      route: routes[i], type: type, priority: priority, title: title, body: body,
+      linked_account_ids: linked.map(function(p){ return p.id; }).join(','),
+      linked_account_names: linked.map(function(p){ return p.name; }).join(' | '),
+      due_date: due, addressed_to: '', status: 'sent', seen_at:'', ack_at:'', handled_by:'',
+      done_at:'', closed_at:'', group_id: group, notified_at:'', updated_at: mnNowIso()
+    };
+    try { await mnAppendNote(routes[i], note); }
+    catch(e) { console.error(e); failed.push(routes[i]); }
+  }
+  if (failed.length) showToast('Posted, except: ' + failed.join(', ') + ' — are the tabs set up there?', 'error');
+  else showToast('Posted to ' + (routes.length === 1 ? routes[0] : routes.length + ' routes') + ' ✓');
+  if (failed.length < routes.length) closeModal('modalMgrCompose');
+  mnRerenderAll();
+}
+
+// ── Rep request ────────────────────────────────────────────────────────────
+async function openMgrRequestModal(account) {
+  await identityReady();
+  if (!allManagers.length) await fetchManagers();
+  var sel = document.getElementById('mnReqTo');
+  sel.innerHTML = '<option value="General">General — any manager</option>' + allManagers.map(function(m){
+    var out = m.out_until && m.out_until >= localTodayKey() ? ' (out until ' + mnDateShort(m.out_until) + ')' : '';
+    return '<option value="' + esc(m.name) + '">' + esc(m.name) + out + '</option>';
+  }).join('');
+  document.getElementById('mnReqType').innerHTML = MN_UP_TYPES.map(function(t){ return '<option>' + esc(t) + '</option>'; }).join('');
+  document.getElementById('mnReqUrgency').value = 'normal';
+  ['mnReqTitle','mnReqBody','mnReqAcctSearch'].forEach(function(id){ document.getElementById(id).value = ''; });
+  mnReqTypeChanged();
+  _mnPickerSource = mnAccountsFromLoaded();
+  _mnPicked = account ? [{ id: account.account_id, name: account.business_name }] : [];
+  mnRenderPicker('mnReq');
+  document.getElementById('modalMgrRequest').classList.add('open');
+}
+function mnReqTypeChanged() {
+  var t = document.getElementById('mnReqType').value;
+  document.getElementById('mnReqBody').placeholder = MN_UP_HINTS[t] || '';
+}
+async function saveMgrRequest() {
+  var to = document.getElementById('mnReqTo').value;
+  var type = document.getElementById('mnReqType').value;
+  var urgency = document.getElementById('mnReqUrgency').value;
+  var title = document.getElementById('mnReqTitle').value.trim();
+  var body = document.getElementById('mnReqBody').value.trim();
+  if (!title) { showToast('Add a short title', 'error'); return; }
+  if (!body) { showToast('Add the details managers need to answer', 'error'); return; }
+  var route = currentTerritory;
+  var note = {
+    note_id: 'MN' + Date.now(), direction: 'up', created_at: mnNowIso(),
+    created_by_email: currentUser.email, created_by_name: myDisplayName(),
+    route: route, type: type, priority: urgency, title: title, body: body,
+    linked_account_ids: _mnPicked.map(function(p){ return p.id; }).join(','),
+    linked_account_names: _mnPicked.map(function(p){ return p.name; }).join(' | '),
+    due_date: '', addressed_to: to, status: 'sent', seen_at:'', ack_at:'', handled_by:'',
+    done_at:'', closed_at:'', group_id:'', notified_at:'', updated_at: mnNowIso()
+  };
+  try {
+    await mnAppendNote(route, note);
+    showToast('Request sent ✓');
+    closeModal('modalMgrRequest');
+    mnRerenderAll();
+  } catch(e) {
+    console.error(e);
+    showToast(describeApiError(e, 'Error sending — are the Manager Notes tabs set up on this route?'), 'error');
+  }
+}
+
+// ── Wiring ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('mnDetailX').addEventListener('click', function(){ closeModal('modalMgrDetail'); });
+  document.getElementById('mnComposeX').addEventListener('click', function(){ closeModal('modalMgrCompose'); });
+  document.getElementById('mnComposeCancel').addEventListener('click', function(){ closeModal('modalMgrCompose'); });
+  document.getElementById('mnComposeSave').addEventListener('click', function(){ guardedSave(saveMgrCompose); });
+  document.getElementById('mnComposeAcctSearch').addEventListener('input', function(){ mnRenderPicker('mnCompose'); });
+  document.getElementById('mnReqX').addEventListener('click', function(){ closeModal('modalMgrRequest'); });
+  document.getElementById('mnReqCancel').addEventListener('click', function(){ closeModal('modalMgrRequest'); });
+  document.getElementById('mnReqSave').addEventListener('click', function(){ guardedSave(saveMgrRequest); });
+  document.getElementById('mnReqType').addEventListener('change', mnReqTypeChanged);
+  document.getElementById('mnReqAcctSearch').addEventListener('input', function(){ mnRenderPicker('mnReq'); });
+  document.getElementById('mnScreenBackBtn').addEventListener('click', goBack);
+  document.querySelectorAll('#mnListTabs .tab').forEach(function(t){
+    t.addEventListener('click', function(){ _mnListTab = t.dataset.tab; renderMgrNotesScreen(); });
+  });
+  document.getElementById('mnScreenRequestBtn').addEventListener('click', function(){ openMgrRequestModal(null); });
+  document.getElementById('mgrInboxBtn').addEventListener('click', openMgrInbox);
+  document.getElementById('mnInboxBackBtn').addEventListener('click', function(){ showScreen('screenCompanyView'); });
+  document.getElementById('mnInboxRefreshBtn').addEventListener('click', function(){ loadMgrInbox(true); });
+  document.getElementById('mnInboxComposeBtn').addEventListener('click', function(){ openMgrComposeModal([]); });
+});
+
 </script>
 <div id="printArea" class="print-only"></div>
 <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
